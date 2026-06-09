@@ -1,0 +1,1485 @@
+basePath: /api
+definitions:
+  domain.CapitalContribution:
+    properties:
+      amount:
+        type: number
+      created_at:
+        type: string
+      description:
+        type: string
+      hidden:
+        description: 'não aparece no histórico (ex: ajuste de zerar capital)'
+        type: boolean
+      id:
+        type: string
+      type:
+        description: '"aporte" ou "retirada"'
+        type: string
+      user_id:
+        type: string
+    type: object
+  domain.Client:
+    properties:
+      address:
+        type: string
+      cpf_cnpj:
+        type: string
+      created_at:
+        type: string
+      debt:
+        type: number
+      debt_limit:
+        type: number
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      notes:
+        type: string
+      payment_cycle_amount:
+        type: number
+      payment_cycle_days:
+        type: integer
+      phone:
+        type: string
+      user_id:
+        type: string
+    type: object
+  domain.ClientPayment:
+    properties:
+      amount:
+        type: number
+      client_id:
+        type: string
+      count_as_revenue:
+        type: boolean
+      created_at:
+        type: string
+      id:
+        type: string
+      notes:
+        type: string
+      user_id:
+        type: string
+    type: object
+  domain.Expense:
+    properties:
+      amount:
+        type: number
+      created_at:
+        type: string
+      description:
+        type: string
+      due_date:
+        type: string
+      id:
+        type: string
+      notes:
+        type: string
+      paid_at:
+        type: string
+      payment_method:
+        type: string
+      status:
+        description: '"Pendente" | "Pago"'
+        type: string
+      supplier:
+        type: string
+      user_id:
+        type: string
+    type: object
+  domain.KitItem:
+    properties:
+      product_id:
+        type: string
+      product_name:
+        type: string
+      quantity:
+        type: integer
+    type: object
+  domain.Order:
+    properties:
+      client_name:
+        type: string
+      client_phone:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/domain.OrderItem'
+        type: array
+      status:
+        type: string
+      total:
+        type: number
+      user_id:
+        type: string
+    type: object
+  domain.OrderItem:
+    properties:
+      price:
+        type: number
+      product_id:
+        type: string
+      product_name:
+        type: string
+      quantity:
+        type: integer
+    type: object
+  domain.Product:
+    properties:
+      category:
+        type: string
+      code:
+        type: string
+      cost_price:
+        type: number
+      id:
+        type: string
+      is_kit:
+        type: boolean
+      kit_items:
+        items:
+          $ref: '#/definitions/domain.KitItem'
+        type: array
+      name:
+        type: string
+      price:
+        type: number
+      stock_quantity:
+        type: integer
+      user_id:
+        type: string
+    type: object
+  domain.Quote:
+    properties:
+      approved_at:
+        type: string
+      client_id:
+        type: string
+      client_name:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      installments:
+        type: integer
+      invoiced_at:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/domain.QuoteItem'
+        type: array
+      notes:
+        type: string
+      payment_type:
+        type: string
+      status:
+        type: string
+      total:
+        type: number
+      user_id:
+        type: string
+    type: object
+  domain.QuoteItem:
+    properties:
+      kit_items:
+        items:
+          $ref: '#/definitions/domain.KitItem'
+        type: array
+      product_id:
+        type: string
+      product_name:
+        type: string
+      quantity:
+        type: integer
+      subtotal:
+        type: number
+      unit_price:
+        type: number
+    type: object
+  domain.User:
+    properties:
+      active:
+        type: boolean
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      role:
+        description: '"admin" | "seller"'
+        type: string
+    type: object
+  httphandler.addDebtRequest:
+    properties:
+      amount:
+        example: 200
+        type: number
+    type: object
+  httphandler.authResponse:
+    properties:
+      token:
+        example: eyJhbGciOiJIUzI1NiIs...
+        type: string
+      user:
+        $ref: '#/definitions/domain.User'
+    type: object
+  httphandler.createUserRequest:
+    properties:
+      email:
+        example: maria@email.com
+        type: string
+      name:
+        example: Maria
+        type: string
+      password:
+        example: "123456"
+        type: string
+      role:
+        example: seller
+        type: string
+    type: object
+  httphandler.errorResponse:
+    properties:
+      error:
+        example: mensagem de erro
+        type: string
+    type: object
+  httphandler.forgotPasswordRequest:
+    properties:
+      email:
+        example: joao@email.com
+        type: string
+    type: object
+  httphandler.loginRequest:
+    properties:
+      email:
+        example: admin@rinoseller.com
+        type: string
+      password:
+        example: "123456"
+        type: string
+    type: object
+  httphandler.messageResponse:
+    properties:
+      message:
+        example: operação realizada com sucesso
+        type: string
+    type: object
+  httphandler.registerPaymentRequest:
+    properties:
+      amount:
+        example: 150
+        type: number
+      count_as_revenue:
+        example: true
+        type: boolean
+      notes:
+        example: Pagamento parcial
+        type: string
+    type: object
+  httphandler.registerRequest:
+    properties:
+      email:
+        example: joao@email.com
+        type: string
+      name:
+        example: João Silva
+        type: string
+      password:
+        example: "123456"
+        type: string
+    type: object
+  httphandler.resetPasswordRequest:
+    properties:
+      password:
+        example: novaSenha123
+        type: string
+      token:
+        example: abc123
+        type: string
+    type: object
+  httphandler.updatePriceRequest:
+    properties:
+      price:
+        example: 29.9
+        type: number
+    type: object
+  httphandler.updateStockRequest:
+    properties:
+      quantity:
+        example: 50
+        type: integer
+    type: object
+  httphandler.updateUserRequest:
+    properties:
+      active:
+        example: true
+        type: boolean
+      email:
+        example: maria@email.com
+        type: string
+      name:
+        example: Maria Silva
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API do sistema RinoSeller — gestão de vendas, clientes, produtos, orçamentos
+    e finanças.
+  title: RinoSeller API
+  version: "1.0"
+paths:
+  /auth/forgot-password:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: E-mail
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httphandler.forgotPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      summary: Esqueci a senha
+      tags:
+      - Auth
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Credenciais
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httphandler.loginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphandler.authResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      summary: Login
+      tags:
+      - Auth
+  /auth/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.User'
+      security:
+      - BearerAuth: []
+      summary: Meu perfil
+      tags:
+      - Auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados de registro
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httphandler.registerRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/httphandler.authResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      summary: Registrar conta
+      tags:
+      - Auth
+  /auth/reset-password:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Token e nova senha
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httphandler.resetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphandler.messageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      summary: Redefinir senha
+      tags:
+      - Auth
+  /capital-contributions:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.CapitalContribution'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Listar aportes de capital
+      tags:
+      - Capital
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados do aporte
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CapitalContribution'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.CapitalContribution'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Criar aporte de capital
+      tags:
+      - Capital
+  /capital-contributions/{id}:
+    delete:
+      parameters:
+      - description: ID do aporte
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphandler.messageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Excluir aporte de capital
+      tags:
+      - Capital
+  /clients:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Client'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Listar clientes
+      tags:
+      - Clientes
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados do cliente
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Client'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Client'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Criar cliente
+      tags:
+      - Clientes
+  /clients/{id}:
+    delete:
+      parameters:
+      - description: ID do cliente
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphandler.messageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Excluir cliente
+      tags:
+      - Clientes
+    get:
+      parameters:
+      - description: ID do cliente
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Client'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Buscar cliente
+      tags:
+      - Clientes
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do cliente
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dados atualizados
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Client'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Client'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualizar cliente
+      tags:
+      - Clientes
+  /clients/{id}/debt:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do cliente
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Valor da dívida
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httphandler.addDebtRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Client'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Adicionar dívida
+      tags:
+      - Clientes
+  /clients/{id}/orders:
+    delete:
+      parameters:
+      - description: ID do cliente
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphandler.messageResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Limpar pedidos do cliente
+      tags:
+      - Clientes
+    get:
+      parameters:
+      - description: ID do cliente
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Order'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Pedidos do cliente
+      tags:
+      - Clientes
+  /clients/{id}/payment:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do cliente
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dados do recebimento
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httphandler.registerPaymentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Client'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Registrar recebimento
+      tags:
+      - Clientes
+  /clients/{id}/payment-history:
+    delete:
+      parameters:
+      - description: ID do cliente
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphandler.messageResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Limpar histórico de recebimentos
+      tags:
+      - Clientes
+    get:
+      parameters:
+      - description: ID do cliente
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.ClientPayment'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Histórico de recebimentos do cliente
+      tags:
+      - Clientes
+  /clients/{id}/quotes:
+    delete:
+      parameters:
+      - description: ID do cliente
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphandler.messageResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Limpar orçamentos do cliente
+      tags:
+      - Clientes
+    get:
+      parameters:
+      - description: ID do cliente
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Quote'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Orçamentos do cliente
+      tags:
+      - Clientes
+  /expenses:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Expense'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Listar despesas
+      tags:
+      - Despesas
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados da despesa
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Expense'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Expense'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Criar despesa
+      tags:
+      - Despesas
+  /expenses/{id}:
+    delete:
+      parameters:
+      - description: ID da despesa
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphandler.messageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Excluir despesa
+      tags:
+      - Despesas
+  /expenses/{id}/pay:
+    post:
+      parameters:
+      - description: ID da despesa
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Expense'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Pagar despesa
+      tags:
+      - Despesas
+  /orders:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Order'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Listar pedidos
+      tags:
+      - Pedidos
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados do pedido
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Order'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Order'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Criar pedido
+      tags:
+      - Pedidos
+  /orders/{id}:
+    delete:
+      parameters:
+      - description: ID do pedido
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphandler.messageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Excluir pedido
+      tags:
+      - Pedidos
+  /payments:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.ClientPayment'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Todos os recebimentos
+      tags:
+      - Clientes
+  /products:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Product'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Listar produtos
+      tags:
+      - Produtos
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados do produto
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Product'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Product'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Criar produto
+      tags:
+      - Produtos
+  /products/{id}:
+    delete:
+      parameters:
+      - description: ID do produto
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphandler.messageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Excluir produto
+      tags:
+      - Produtos
+  /products/{id}/price:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do produto
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Novo preço
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httphandler.updatePriceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphandler.messageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualizar preço
+      tags:
+      - Produtos
+  /products/{id}/stock:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do produto
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Nova quantidade
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httphandler.updateStockRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphandler.messageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualizar estoque
+      tags:
+      - Produtos
+  /quotes:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Quote'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Listar orçamentos
+      tags:
+      - Orçamentos
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados do orçamento
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Quote'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Quote'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Criar orçamento
+      tags:
+      - Orçamentos
+  /quotes/{id}:
+    delete:
+      parameters:
+      - description: ID do orçamento
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphandler.messageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Excluir orçamento
+      tags:
+      - Orçamentos
+    get:
+      parameters:
+      - description: ID do orçamento
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Quote'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Buscar orçamento
+      tags:
+      - Orçamentos
+  /quotes/{id}/approve:
+    post:
+      parameters:
+      - description: ID do orçamento
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Quote'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Aprovar orçamento
+      tags:
+      - Orçamentos
+  /quotes/{id}/cancel:
+    post:
+      parameters:
+      - description: ID do orçamento
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Quote'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Cancelar orçamento
+      tags:
+      - Orçamentos
+  /quotes/{id}/deliver:
+    post:
+      parameters:
+      - description: ID do orçamento
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Quote'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Marcar como entregue
+      tags:
+      - Orçamentos
+  /quotes/{id}/invoice:
+    post:
+      parameters:
+      - description: ID do orçamento
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Quote'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Faturar orçamento
+      tags:
+      - Orçamentos
+  /users:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.User'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Listar usuários
+      tags:
+      - Usuários
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados do usuário
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httphandler.createUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Criar usuário
+      tags:
+      - Usuários
+  /users/{id}:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do usuário
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dados atualizados
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httphandler.updateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualizar usuário
+      tags:
+      - Usuários
+securityDefinitions:
+  BearerAuth:
+    description: 'Informe: Bearer {token}'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

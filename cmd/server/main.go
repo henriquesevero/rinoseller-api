@@ -1,3 +1,12 @@
+// @title           RinoSeller API
+// @version         1.0
+// @description     API do sistema RinoSeller — gestão de vendas, clientes, produtos, orçamentos e finanças.
+// @host            localhost:8080
+// @BasePath        /api
+// @securityDefinitions.apikey BearerAuth
+// @in              header
+// @name            Authorization
+// @description     Informe: Bearer {token}
 package main
 
 import (
@@ -5,6 +14,7 @@ import (
 
 	"github.com/joho/godotenv"
 
+	_ "rinoseller-api/docs"
 	httphandler "rinoseller-api/internal/adapters/in/http"
 	"rinoseller-api/internal/adapters/out/database"
 	"rinoseller-api/internal/adapters/out/repository"
