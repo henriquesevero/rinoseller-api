@@ -163,3 +163,29 @@ ALTER TABLE capital_contributions ADD COLUMN IF NOT EXISTS hidden BOOLEAN NOT NU
 -- Limite de dívida por cliente: 0 significa sem limite
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS debt_limit NUMERIC(10,2) NOT NULL DEFAULT 0;
 
+-- Índices para acelerar queries por user_id (filtro principal em todas as listagens)
+CREATE INDEX IF NOT EXISTS idx_products_user_id            ON products(user_id);
+CREATE INDEX IF NOT EXISTS idx_clients_user_id             ON clients(user_id);
+CREATE INDEX IF NOT EXISTS idx_orders_user_id              ON orders(user_id);
+CREATE INDEX IF NOT EXISTS idx_quotes_user_id              ON quotes(user_id);
+CREATE INDEX IF NOT EXISTS idx_expenses_user_id            ON expenses(user_id);
+CREATE INDEX IF NOT EXISTS idx_capital_contributions_user  ON capital_contributions(user_id);
+CREATE INDEX IF NOT EXISTS idx_client_payments_user_id     ON client_payments(user_id);
+
+-- Índices para buscas por chave estrangeira
+CREATE INDEX IF NOT EXISTS idx_quotes_client_id            ON quotes(client_id);
+CREATE INDEX IF NOT EXISTS idx_quote_items_quote_id        ON quote_items(quote_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_order_id        ON order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_kit_items_kit_id            ON kit_items(kit_id);
+CREATE INDEX IF NOT EXISTS idx_client_payments_client_id   ON client_payments(client_id);
+
+-- Índices para ordenação (ORDER BY created_at DESC)
+CREATE INDEX IF NOT EXISTS idx_quotes_created_at           ON quotes(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_orders_created_at           ON orders(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_expenses_created_at         ON expenses(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_capital_created_at          ON capital_contributions(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_client_payments_created_at  ON client_payments(created_at DESC);
+
+-- Índice para busca de usuário por reset_token
+CREATE INDEX IF NOT EXISTS idx_users_reset_token           ON users(reset_token) WHERE reset_token IS NOT NULL;
+
