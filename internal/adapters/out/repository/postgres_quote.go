@@ -11,15 +11,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func marshalKitItems(items []domain.KitItem) []byte {
+func marshalKitItems(items []domain.KitItem) string {
 	if len(items) == 0 {
-		return []byte(`[]`)
+		return `[]`
 	}
 	b, err := json.Marshal(items)
 	if err != nil {
-		return []byte(`[]`)
+		return `[]`
 	}
-	return b
+	return string(b)
 }
 
 func unmarshalKitItems(raw []byte) []domain.KitItem {
@@ -129,11 +129,11 @@ func (r *PostgresQuoteRepository) query(ctx context.Context, sql string, args ..
 	for itemRows.Next() {
 		var quoteID string
 		var item domain.QuoteItem
-		var kitItemsRaw []byte
+		var kitItemsRaw string
 		if err := itemRows.Scan(&quoteID, &item.ProductID, &item.ProductName, &item.Quantity, &item.UnitPrice, &item.Subtotal, &kitItemsRaw); err != nil {
 			return nil, err
 		}
-		item.KitItems = unmarshalKitItems(kitItemsRaw)
+		item.KitItems = unmarshalKitItems([]byte(kitItemsRaw))
 		if q, ok := quoteMap[quoteID]; ok {
 			q.Items = append(q.Items, item)
 		}
@@ -170,11 +170,11 @@ func (r *PostgresQuoteRepository) FindByID(id string) (*domain.Quote, error) {
 	q.Items = []domain.QuoteItem{}
 	for itemRows.Next() {
 		var item domain.QuoteItem
-		var kitItemsRaw []byte
+		var kitItemsRaw string
 		if err := itemRows.Scan(&item.ProductID, &item.ProductName, &item.Quantity, &item.UnitPrice, &item.Subtotal, &kitItemsRaw); err != nil {
 			return nil, err
 		}
-		item.KitItems = unmarshalKitItems(kitItemsRaw)
+		item.KitItems = unmarshalKitItems([]byte(kitItemsRaw))
 		q.Items = append(q.Items, item)
 	}
 
