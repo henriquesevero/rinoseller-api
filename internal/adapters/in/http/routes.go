@@ -2,6 +2,8 @@ package httphandler
 
 import (
 	"net/http"
+	"os"
+	"strings"
 	"rinoseller-api/internal/core/ports"
 
 	"github.com/gin-contrib/cors"
@@ -10,11 +12,21 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 )
 
+func allowedOrigins() []string {
+	origins := []string{"http://localhost:5173", "http://localhost:3000"}
+	if extra := os.Getenv("ALLOWED_ORIGINS"); extra != "" {
+		for _, o := range strings.Split(extra, ",") {
+			origins = append(origins, strings.TrimSpace(o))
+		}
+	}
+	return origins
+}
+
 func SetupRouter(h *Handler, authUC ports.AuthUseCase) *gin.Engine {
 	r := gin.Default()
 
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:3000"},
+		AllowOrigins:     allowedOrigins(),
 		AllowMethods:     []string{"GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		AllowCredentials: true,
