@@ -1,6 +1,7 @@
 package httphandler
 
 import (
+	"net/http"
 	"rinoseller-api/internal/core/ports"
 
 	"github.com/gin-contrib/cors"
@@ -16,6 +17,10 @@ func SetupRouter(h *Handler, authUC ports.AuthUseCase) *gin.Engine {
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		AllowCredentials: true,
 	}))
+
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
 
 	api := r.Group("/api")
 
