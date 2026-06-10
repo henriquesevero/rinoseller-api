@@ -50,25 +50,31 @@ func (r *PostgresOrderRepository) Save(o *domain.Order) error {
 // FindAll retorna pedidos do usuário; userID="" retorna todos (admin).
 func (r *PostgresOrderRepository) FindAll(userID string) ([]domain.Order, error) {
 	ctx := context.Background()
-
-	var rows interface {
-		Next() bool
-		Scan(...any) error
-		Close()
-	}
-	var err error
-
 	if userID == "" {
-		rows, err = r.db.Query(ctx, `
+		return r.query(ctx, `
 			SELECT id, COALESCE(user_id,''), client_name, client_phone, total, status, created_at
 			FROM orders ORDER BY created_at DESC
 		`)
-	} else {
-		rows, err = r.db.Query(ctx, `
-			SELECT id, COALESCE(user_id,''), client_name, client_phone, total, status, created_at
-			FROM orders WHERE user_id = $1 ORDER BY created_at DESC
-		`, userID)
 	}
+	return r.query(ctx, `
+		SELECT id, COALESCE(user_id,''), client_name, client_phone, total, status, created_at
+		FROM orders WHERE user_id = $1 ORDER BY created_at DESC
+	`, userID)
+}
+
+// FindByClientMatch retorna pedidos do catálogo associados ao cliente: por telefone
+// quando o cliente possui telefone cadastrado, ou por nome (case-insensitive) caso contrário.
+func (r *PostgresOrderRepository) FindByClientMatch(phone, name string) ([]domain.Order, error) {
+	return r.query(context.Background(), `
+		SELECT id, COALESCE(user_id,''), client_name, client_phone, total, status, created_at
+		FROM orders
+		WHERE ($1 <> '' AND client_phone = $1) OR ($1 = '' AND LOWER(client_name) = LOWER($2))
+		ORDER BY created_at DESC
+	`, phone, name)
+}
+
+func (r *PostgresOrderRepository) query(ctx context.Context, sql string, args ...any) ([]domain.Order, error) {
+	rows, err := r.db.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, err
 	}

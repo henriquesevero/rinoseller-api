@@ -2,7 +2,6 @@ package services
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"rinoseller-api/internal/core/domain"
@@ -75,19 +74,7 @@ func (s *ClientService) GetClientOrders(id string) ([]domain.Order, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cliente não encontrado: %w", err)
 	}
-	allOrders, err := s.orderRepo.FindAll("")
-	if err != nil {
-		return nil, err
-	}
-	result := make([]domain.Order, 0)
-	for _, o := range allOrders {
-		if client.Phone != "" && o.ClientPhone == client.Phone {
-			result = append(result, o)
-		} else if client.Phone == "" && strings.EqualFold(o.ClientName, client.Name) {
-			result = append(result, o)
-		}
-	}
-	return result, nil
+	return s.orderRepo.FindByClientMatch(client.Phone, client.Name)
 }
 
 func (s *ClientService) GetClientPayments(clientID string) ([]domain.ClientPayment, error) {

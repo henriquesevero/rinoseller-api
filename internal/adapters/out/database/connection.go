@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -25,6 +26,13 @@ func NewPool() (*pgxpool.Pool, error) {
 	}
 	// Supabase transaction pooler (porta 6543) não suporta prepared statements
 	config.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+
+	// Tuning do pool: o transaction pooler do Supabase já multiplexa conexões,
+	// então mantemos um pool enxuto para não esgotar o limite do pooler.
+	config.MaxConns = 10
+	config.MinConns = 2
+	config.MaxConnLifetime = 30 * time.Minute
+	config.MaxConnIdleTime = 5 * time.Minute
 
 	pool, err := pgxpool.NewWithConfig(context.Background(), config)
 	if err != nil {

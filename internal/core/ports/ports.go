@@ -32,6 +32,7 @@ type ProductRepository interface {
 type OrderRepository interface {
 	Save(o *domain.Order) error
 	FindAll(userID string) ([]domain.Order, error)
+	FindByClientMatch(phone, name string) ([]domain.Order, error)
 	Delete(id string) error
 }
 

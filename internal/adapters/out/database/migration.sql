@@ -189,3 +189,6 @@ CREATE INDEX IF NOT EXISTS idx_client_payments_created_at  ON client_payments(cr
 -- Índice para busca de usuário por reset_token
 CREATE INDEX IF NOT EXISTS idx_users_reset_token           ON users(reset_token) WHERE reset_token IS NOT NULL;
 
+-- Índice para casar pedidos do catálogo com o cliente pelo telefone
+CREATE INDEX IF NOT EXISTS idx_orders_client_phone         ON orders(client_phone) WHERE client_phone <> '';
+
