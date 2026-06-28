@@ -10,3 +10,6 @@ jwt_secret   = "gerar-com: openssl rand -hex 32"
 
 # Domínio do frontend na Vercel, separado por vírgula se houver mais de um.
 allowed_origins = "https://app.rinoseller.com.br"
+
+# Repositório autorizado a assumir a role de deploy via OIDC do GitHub Actions.
+github_repo = "owner/repo"

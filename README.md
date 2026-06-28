@@ -184,12 +184,26 @@ golangci-lint run ./...   # brew install golangci-lint
 
 ## Deploy na AWS
 
-Infraestrutura como código em `infra/terraform/` (ECR, Lambda, IAM, CloudWatch Logs, Function URL). Passo a passo completo — criação do bucket de state, build/push da imagem, `terraform apply` — está em [`infra/terraform/README.md`](infra/terraform/README.md).
+Infraestrutura como código em `infra/terraform/` (ECR, Lambda, API Gateway HTTP API, IAM, CloudWatch Logs, role OIDC para CI). Passo a passo manual completo — criação do bucket de state, build/push da imagem, `terraform apply` — está em [`infra/terraform/README.md`](infra/terraform/README.md).
 
-Resumo do fluxo:
-1. Provisionar o ECR.
-2. Build da imagem com `--target lambda`, push para o ECR.
-3. `terraform apply` cria a função Lambda apontando para a imagem.
-4. Rodar `cmd/migrate` uma vez contra o banco de produção.
+A API é exposta via **API Gateway HTTP API** (não Function URL) — o Lambda Web Adapter trata os dois formatos de evento da mesma forma, então isso não exige nenhuma mudança no código Go.
 
-O banco de dados continua no Supabase nesta fase — a migração para RDS/outro provedor, se vier a acontecer, é um passo independente deste deploy.
+O banco de dados continua no Supabase (pooler em modo *transaction*, porta 6543 — necessário porque Lambda abre uma conexão por invocação concorrente, e o pooler evita esgotar o limite de conexões do Postgres).
+
+### CI/CD — GitHub Actions
+
+- `.github/workflows/ci.yml`: roda em todo PR contra `main` — build, vet, gofmt, golangci-lint e `terraform validate`. Não precisa de credenciais AWS.
+- `.github/workflows/deploy.yml`: roda em todo push em `main` (ou manualmente) — build + push da imagem no ECR, `terraform apply`, e roda a migração do banco. Autentica na AWS via **OIDC** (`aws_iam_openid_connect_provider` + `aws_iam_role.github_actions_deploy` em `infra/terraform/github_oidc.tf`) — nenhuma access key fica armazenada como secret do GitHub, o workflow assume a role via token federado, restrito a `repo:<owner>/<repo>:ref:refs/heads/main`.
+
+Secrets necessários no repositório GitHub (**Settings → Secrets and variables → Actions**):
+
+| Nome | Tipo | Valor |
+|---|---|---|
+| `DATABASE_URL` | Secret | Connection string do Postgres (pooler) |
+| `JWT_SECRET` | Secret | Secret de produção dos JWTs |
+| `AWS_ROLE_ARN` | Variable | ARN da role criada em `github_oidc.tf` (saída `github_actions_role_arn` do Terraform) |
+| `ALLOWED_ORIGINS` | Variable | Domínio do frontend, se aplicável |
+
+### Status atual do deploy
+
+A função Lambda já está criada e funcionando (validado invocando diretamente via `aws lambda invoke`). A exposição pública (API Gateway) e a criação da role OIDC do GitHub Actions estão temporariamente bloqueadas por uma **restrição padrão de conta nova da AWS** (anti-fraude, bloqueia criação de endpoints públicos em contas recém-criadas) — não é um problema de código, Terraform ou IAM policy. Resolve-se abrindo um chamado gratuito em **Support Center → Account and Billing**. Depois de liberado pela AWS, basta rodar `terraform apply` de novo em `infra/terraform/` — nenhuma mudança adicional é necessária.
