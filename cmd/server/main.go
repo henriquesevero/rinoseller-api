@@ -49,6 +49,7 @@ func main() {
 	quoteRepo := repository.NewPostgresQuoteRepository(db)
 	expenseRepo := repository.NewPostgresExpenseRepository(db)
 	capitalRepo := repository.NewPostgresCapitalContributionRepository(db)
+	brandCatalogRepo := repository.NewPostgresBrandCatalogRepository(db)
 
 	authService, err := services.NewAuthService(userRepo)
 	if err != nil {
@@ -61,6 +62,7 @@ func main() {
 	quoteService := services.NewQuoteService(quoteRepo, productRepo, clientRepo)
 	expenseService := services.NewExpenseService(expenseRepo)
 	capitalService := services.NewCapitalContributionService(capitalRepo)
+	brandCatalogService := services.NewBrandCatalogService(brandCatalogRepo)
 
 	if password, err := userService.EnsureDefaultAdmin(ctx); err != nil {
 		log.Printf("⚠ Aviso ao criar admin padrão: %v", err)
@@ -68,7 +70,7 @@ func main() {
 		log.Printf("✓ Admin padrão criado: admin@rinoseller.com / senha temporária: %s (troque-a após o primeiro login)", password)
 	}
 
-	handler := httphandler.NewHandler(authService, userService, productService, orderService, clientService, quoteService, expenseService, capitalService)
+	handler := httphandler.NewHandler(authService, userService, productService, orderService, clientService, quoteService, expenseService, capitalService, brandCatalogService)
 	router := httphandler.SetupRouter(handler, authService)
 
 	srv := newServer(router)

@@ -99,6 +99,10 @@ func SetupRouter(h *Handler, authUC ports.AuthUseCase) *gin.Engine {
 		auth.GET("/capital-contributions", h.ListCapitalContributions)
 		auth.POST("/capital-contributions", h.CreateCapitalContribution)
 		auth.DELETE("/capital-contributions/:id", h.DeleteCapitalContribution)
+
+		auth.GET("/brand-catalogs", h.ListBrandCatalogs)
+		auth.POST("/brand-catalogs", h.CreateBrandCatalog)
+		auth.DELETE("/brand-catalogs/:id", h.DeleteBrandCatalog)
 	}
 
 	return r

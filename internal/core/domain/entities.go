@@ -236,6 +236,14 @@ type CapitalContribution struct {
 	CreatedAt   time.Time        `json:"created_at"`
 }
 
+type BrandCatalog struct {
+	ID        string    `json:"id"`
+	UserID    string    `json:"user_id,omitempty"`
+	BrandName string    `json:"brand_name"`
+	DriveURL  string    `json:"drive_url"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type ExpenseStatus string
 
 const (

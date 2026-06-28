@@ -57,6 +57,12 @@ type CapitalContributionRepository interface {
 	Delete(ctx context.Context, id string) error
 }
 
+type BrandCatalogRepository interface {
+	Save(ctx context.Context, c *domain.BrandCatalog) error
+	FindAll(ctx context.Context, userID string) ([]domain.BrandCatalog, error)
+	Delete(ctx context.Context, id string) error
+}
+
 type ExpenseRepository interface {
 	Save(ctx context.Context, e *domain.Expense) error
 	FindAll(ctx context.Context, userID string) ([]domain.Expense, error)
@@ -123,6 +129,12 @@ type CapitalContributionUseCase interface {
 	ListContributions(ctx context.Context, userID string) ([]domain.CapitalContribution, error)
 	AddContribution(ctx context.Context, e *domain.CapitalContribution) error
 	DeleteContribution(ctx context.Context, id string) error
+}
+
+type BrandCatalogUseCase interface {
+	ListCatalogs(ctx context.Context, userID string) ([]domain.BrandCatalog, error)
+	AddCatalog(ctx context.Context, c *domain.BrandCatalog) error
+	DeleteCatalog(ctx context.Context, id string) error
 }
 
 type ExpenseUseCase interface {

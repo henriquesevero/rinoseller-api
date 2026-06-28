@@ -196,3 +196,11 @@ CREATE INDEX IF NOT EXISTS idx_users_reset_token           ON users(reset_token)
 -- Índice para casar pedidos do catálogo com o cliente pelo telefone
 CREATE INDEX IF NOT EXISTS idx_orders_client_phone         ON orders(client_phone) WHERE client_phone <> '';
 
+CREATE TABLE IF NOT EXISTS brand_catalogs (
+    id          TEXT PRIMARY KEY,
+    user_id     TEXT REFERENCES users(id),
+    brand_name  TEXT NOT NULL,
+    drive_url   TEXT NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
