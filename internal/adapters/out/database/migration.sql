@@ -163,6 +163,10 @@ ALTER TABLE capital_contributions ADD COLUMN IF NOT EXISTS hidden BOOLEAN NOT NU
 -- Limite de dívida por cliente: 0 significa sem limite
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS debt_limit NUMERIC(10,2) NOT NULL DEFAULT 0;
 
+-- Timestamp de entrega, separado de invoiced_at (antes a entrega sobrescrevia
+-- a data de faturamento por engano)
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ;
+
 -- Índices para acelerar queries por user_id (filtro principal em todas as listagens)
 CREATE INDEX IF NOT EXISTS idx_products_user_id            ON products(user_id);
 CREATE INDEX IF NOT EXISTS idx_clients_user_id             ON clients(user_id);

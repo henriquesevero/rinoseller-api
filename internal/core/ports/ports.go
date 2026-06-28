@@ -1,148 +1,146 @@
 package ports
 
 import (
+	"context"
 	"time"
 
 	"rinoseller-api/internal/core/domain"
 )
 
-// --- Output Ports (Driven) ---
-
 type UserRepository interface {
-	Save(u *domain.User) error
-	FindByEmail(email string) (*domain.User, error)
-	FindByID(id string) (*domain.User, error)
-	FindAll() ([]domain.User, error)
-	Update(u *domain.User) error
-	HasAnyAdmin() (bool, error)
-	SetResetToken(id, token string, expires time.Time) error
-	FindByResetToken(token string) (*domain.User, error)
-	ClearResetToken(id string) error
+	Save(ctx context.Context, u *domain.User) error
+	FindByEmail(ctx context.Context, email string) (*domain.User, error)
+	FindByID(ctx context.Context, id string) (*domain.User, error)
+	FindAll(ctx context.Context) ([]domain.User, error)
+	Update(ctx context.Context, u *domain.User) error
+	HasAnyAdmin(ctx context.Context) (bool, error)
+	SetResetToken(ctx context.Context, id, token string, expires time.Time) error
+	FindByResetToken(ctx context.Context, token string) (*domain.User, error)
+	ClearResetToken(ctx context.Context, id string) error
 }
 
 type ProductRepository interface {
-	Save(p *domain.Product) error
-	FindAll(userID string) ([]domain.Product, error)
-	FindByID(id string) (*domain.Product, error)
-	UpdateStock(id string, newStock int) error
-	UpdatePrice(id string, price float64) error
-	Delete(id string) error
+	Save(ctx context.Context, p *domain.Product) error
+	FindAll(ctx context.Context, userID string) ([]domain.Product, error)
+	FindByID(ctx context.Context, id string) (*domain.Product, error)
+	UpdateStock(ctx context.Context, id string, newStock int) error
+	UpdatePrice(ctx context.Context, id string, price domain.Money) error
+	Delete(ctx context.Context, id string) error
 }
 
 type OrderRepository interface {
-	Save(o *domain.Order) error
-	FindAll(userID string) ([]domain.Order, error)
-	FindByClientMatch(phone, name string) ([]domain.Order, error)
-	Delete(id string) error
+	Save(ctx context.Context, o *domain.Order) error
+	FindAll(ctx context.Context, userID string) ([]domain.Order, error)
+	FindByClientMatch(ctx context.Context, phone, name string) ([]domain.Order, error)
+	Delete(ctx context.Context, id string) error
 }
 
 type ClientRepository interface {
-	Save(c *domain.Client) error
-	FindAll(userID string) ([]domain.Client, error)
-	FindByID(id string) (*domain.Client, error)
-	FindByPhone(phone string) (*domain.Client, error)
-	Update(c *domain.Client) error
-	Delete(id string) error
-	SavePayment(p *domain.ClientPayment) error
-	FindPaymentsByClientID(clientID string) ([]domain.ClientPayment, error)
-	FindAllPayments(userID string) ([]domain.ClientPayment, error)
-	DeletePaymentsByClientID(clientID string) error
+	Save(ctx context.Context, c *domain.Client) error
+	FindAll(ctx context.Context, userID string) ([]domain.Client, error)
+	FindByID(ctx context.Context, id string) (*domain.Client, error)
+	FindByPhone(ctx context.Context, phone string) (*domain.Client, error)
+	Update(ctx context.Context, c *domain.Client) error
+	Delete(ctx context.Context, id string) error
+}
+
+type ClientPaymentRepository interface {
+	Save(ctx context.Context, p *domain.ClientPayment) error
+	FindByClientID(ctx context.Context, clientID string) ([]domain.ClientPayment, error)
+	FindAll(ctx context.Context, userID string) ([]domain.ClientPayment, error)
+	DeleteByClientID(ctx context.Context, clientID string) error
 }
 
 type CapitalContributionRepository interface {
-	Save(e *domain.CapitalContribution) error
-	FindAll(userID string) ([]domain.CapitalContribution, error)
-	Delete(id string) error
+	Save(ctx context.Context, e *domain.CapitalContribution) error
+	FindAll(ctx context.Context, userID string) ([]domain.CapitalContribution, error)
+	Delete(ctx context.Context, id string) error
 }
 
 type ExpenseRepository interface {
-	Save(e *domain.Expense) error
-	FindAll(userID string) ([]domain.Expense, error)
-	FindByID(id string) (*domain.Expense, error)
-	Update(e *domain.Expense) error
-	Delete(id string) error
+	Save(ctx context.Context, e *domain.Expense) error
+	FindAll(ctx context.Context, userID string) ([]domain.Expense, error)
+	FindByID(ctx context.Context, id string) (*domain.Expense, error)
+	Update(ctx context.Context, e *domain.Expense) error
+	Delete(ctx context.Context, id string) error
 }
 
 type QuoteRepository interface {
-	Save(q *domain.Quote) error
-	FindAll(userID string) ([]domain.Quote, error)
-	FindByID(id string) (*domain.Quote, error)
-	Update(q *domain.Quote) error
-	FindByClientID(clientID string) ([]domain.Quote, error)
-	Delete(id string) error
-	DeleteByClientID(clientID string) error
+	Save(ctx context.Context, q *domain.Quote) error
+	FindAll(ctx context.Context, userID string) ([]domain.Quote, error)
+	FindByID(ctx context.Context, id string) (*domain.Quote, error)
+	Update(ctx context.Context, q *domain.Quote) error
+	FindByClientID(ctx context.Context, clientID string) ([]domain.Quote, error)
+	Delete(ctx context.Context, id string) error
+	DeleteByClientID(ctx context.Context, clientID string) error
 }
 
-
-// --- Input Ports / Use Cases (Driver) ---
-
 type AuthUseCase interface {
-	Login(email, password string) (token string, user *domain.User, err error)
-	ValidateToken(token string) (*domain.User, error)
-	ForgotPassword(email string) (resetToken string, err error)
-	ResetPassword(token, newPassword string) error
+	Login(ctx context.Context, email, password string) (token string, user *domain.User, err error)
+	ValidateToken(ctx context.Context, token string) (*domain.User, error)
+	ForgotPassword(ctx context.Context, email string) (resetToken string, err error)
+	ResetPassword(ctx context.Context, token, newPassword string) error
 }
 
 type UserUseCase interface {
-	CreateUser(name, email, password, role string) (*domain.User, error)
-	ListUsers() ([]domain.User, error)
-	GetUser(id string) (*domain.User, error)
-	UpdateUser(id, name, email string, active bool) (*domain.User, error)
-	EnsureDefaultAdmin() error
+	CreateUser(ctx context.Context, name, email, password string, role domain.UserRole) (*domain.User, error)
+	ListUsers(ctx context.Context) ([]domain.User, error)
+	GetUser(ctx context.Context, id string) (*domain.User, error)
+	UpdateUser(ctx context.Context, id, name, email string, active bool) (*domain.User, error)
+	EnsureDefaultAdmin(ctx context.Context) (generatedPassword string, err error)
 }
 
 type ProductUseCase interface {
-	ListProducts(userID string) ([]domain.Product, error)
-	CreateProduct(p *domain.Product) error
-	UpdatePrice(id string, price float64) error
-	UpdateStock(id string, newStock int) error
-	DeleteProduct(id string) error
+	ListProducts(ctx context.Context, userID string) ([]domain.Product, error)
+	CreateProduct(ctx context.Context, p *domain.Product) error
+	UpdatePrice(ctx context.Context, id string, price domain.Money) error
+	UpdateStock(ctx context.Context, id string, newStock int) error
+	DeleteProduct(ctx context.Context, id string) error
 }
 
 type OrderUseCase interface {
-	CreateOrder(order *domain.Order) error
-	ListOrders(userID string) ([]domain.Order, error)
-	DeleteOrder(id string) error
+	CreateOrder(ctx context.Context, order *domain.Order) error
+	ListOrders(ctx context.Context, userID string) ([]domain.Order, error)
+	DeleteOrder(ctx context.Context, id string) error
 }
 
 type ClientUseCase interface {
-	ListClients(userID string) ([]domain.Client, error)
-	CreateClient(c *domain.Client) error
-	GetClient(id string) (*domain.Client, error)
-	UpdateClient(c *domain.Client) error
-	RegisterPayment(id, userID string, amount float64, notes string, countAsRevenue bool) error
-	AddDebt(id string, amount float64) error
-	GetClientOrders(id string) ([]domain.Order, error)
-	GetClientPayments(clientID string) ([]domain.ClientPayment, error)
-	GetAllPayments(userID string) ([]domain.ClientPayment, error)
-	DeleteClient(id string) error
-	ClearPaymentHistory(id string) error
-	ClearClientOrders(id string) error
+	ListClients(ctx context.Context, userID string) ([]domain.Client, error)
+	CreateClient(ctx context.Context, c *domain.Client) error
+	GetClient(ctx context.Context, id string) (*domain.Client, error)
+	UpdateClient(ctx context.Context, c *domain.Client) error
+	RegisterPayment(ctx context.Context, id, userID string, amount domain.Money, notes string, countAsRevenue bool) error
+	AddDebt(ctx context.Context, id string, amount domain.Money) error
+	GetClientOrders(ctx context.Context, id string) ([]domain.Order, error)
+	GetClientPayments(ctx context.Context, clientID string) ([]domain.ClientPayment, error)
+	GetAllPayments(ctx context.Context, userID string) ([]domain.ClientPayment, error)
+	DeleteClient(ctx context.Context, id string) error
+	ClearPaymentHistory(ctx context.Context, id string) error
+	ClearClientOrders(ctx context.Context, id string) error
 }
 
 type CapitalContributionUseCase interface {
-	ListContributions(userID string) ([]domain.CapitalContribution, error)
-	AddContribution(e *domain.CapitalContribution) error
-	DeleteContribution(id string) error
+	ListContributions(ctx context.Context, userID string) ([]domain.CapitalContribution, error)
+	AddContribution(ctx context.Context, e *domain.CapitalContribution) error
+	DeleteContribution(ctx context.Context, id string) error
 }
 
 type ExpenseUseCase interface {
-	ListExpenses(userID string) ([]domain.Expense, error)
-	CreateExpense(e *domain.Expense) error
-	PayExpense(id string) (*domain.Expense, error)
-	DeleteExpense(id string) error
+	ListExpenses(ctx context.Context, userID string) ([]domain.Expense, error)
+	CreateExpense(ctx context.Context, e *domain.Expense) error
+	PayExpense(ctx context.Context, id string) (*domain.Expense, error)
+	DeleteExpense(ctx context.Context, id string) error
 }
 
 type QuoteUseCase interface {
-	ListQuotes(userID string) ([]domain.Quote, error)
-	CreateQuote(q *domain.Quote) error
-	GetQuote(id string) (*domain.Quote, error)
-	ApproveQuote(id string) (*domain.Quote, error)
-	DeliverQuote(id string) (*domain.Quote, error)
-	InvoiceQuote(id string) (*domain.Quote, error)
-	CancelQuote(id string) (*domain.Quote, error)
-	GetClientQuotes(clientID string) ([]domain.Quote, error)
-	DeleteQuote(id string) error
-	ClearClientQuotes(clientID string) error
+	ListQuotes(ctx context.Context, userID string) ([]domain.Quote, error)
+	CreateQuote(ctx context.Context, q *domain.Quote) error
+	GetQuote(ctx context.Context, id string) (*domain.Quote, error)
+	ApproveQuote(ctx context.Context, id string) (*domain.Quote, error)
+	DeliverQuote(ctx context.Context, id string) (*domain.Quote, error)
+	InvoiceQuote(ctx context.Context, id string) (*domain.Quote, error)
+	CancelQuote(ctx context.Context, id string) (*domain.Quote, error)
+	GetClientQuotes(ctx context.Context, clientID string) ([]domain.Quote, error)
+	DeleteQuote(ctx context.Context, id string) error
+	ClearClientQuotes(ctx context.Context, clientID string) error
 }
-

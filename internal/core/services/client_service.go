@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -11,45 +12,50 @@ import (
 )
 
 type ClientService struct {
-	clientRepo ports.ClientRepository
-	orderRepo  ports.OrderRepository
+	clientRepo  ports.ClientRepository
+	orderRepo   ports.OrderRepository
+	paymentRepo ports.ClientPaymentRepository
+	quoteRepo   ports.QuoteRepository
 }
 
-func NewClientService(clientRepo ports.ClientRepository, orderRepo ports.OrderRepository) *ClientService {
-	return &ClientService{clientRepo: clientRepo, orderRepo: orderRepo}
+func NewClientService(clientRepo ports.ClientRepository, orderRepo ports.OrderRepository, paymentRepo ports.ClientPaymentRepository, quoteRepo ports.QuoteRepository) *ClientService {
+	return &ClientService{clientRepo: clientRepo, orderRepo: orderRepo, paymentRepo: paymentRepo, quoteRepo: quoteRepo}
 }
 
-func (s *ClientService) ListClients(userID string) ([]domain.Client, error) {
-	return s.clientRepo.FindAll(userID)
+func (s *ClientService) ListClients(ctx context.Context, userID string) ([]domain.Client, error) {
+	return s.clientRepo.FindAll(ctx, userID)
 }
 
-func (s *ClientService) CreateClient(c *domain.Client) error {
+func (s *ClientService) CreateClient(ctx context.Context, c *domain.Client) error {
+	if c.Name == "" {
+		return fmt.Errorf("nome é obrigatório: %w", domain.ErrValidation)
+	}
 	c.ID = uuid.New().String()
 	c.CreatedAt = time.Now()
-	return s.clientRepo.Save(c)
+	return s.clientRepo.Save(ctx, c)
 }
 
-func (s *ClientService) GetClient(id string) (*domain.Client, error) {
-	return s.clientRepo.FindByID(id)
+func (s *ClientService) GetClient(ctx context.Context, id string) (*domain.Client, error) {
+	return s.clientRepo.FindByID(ctx, id)
 }
 
-func (s *ClientService) UpdateClient(c *domain.Client) error {
-	return s.clientRepo.Update(c)
+func (s *ClientService) UpdateClient(ctx context.Context, c *domain.Client) error {
+	return s.clientRepo.Update(ctx, c)
 }
 
-func (s *ClientService) RegisterPayment(id, userID string, amount float64, notes string, countAsRevenue bool) error {
-	client, err := s.clientRepo.FindByID(id)
+func (s *ClientService) RegisterPayment(ctx context.Context, id, userID string, amount domain.Money, notes string, countAsRevenue bool) error {
+	if !amount.IsPositive() {
+		return fmt.Errorf("valor inválido: %w", domain.ErrValidation)
+	}
+	client, err := s.clientRepo.FindByID(ctx, id)
 	if err != nil {
-		return fmt.Errorf("cliente não encontrado: %w", err)
-	}
-	client.Debt -= amount
-	if client.Debt < 0 {
-		client.Debt = 0
-	}
-	if err := s.clientRepo.Update(client); err != nil {
 		return err
 	}
-	return s.clientRepo.SavePayment(&domain.ClientPayment{
+	client.ApplyPayment(amount)
+	if err := s.clientRepo.Update(ctx, client); err != nil {
+		return err
+	}
+	return s.paymentRepo.Save(ctx, &domain.ClientPayment{
 		ID:             uuid.New().String(),
 		ClientID:       id,
 		UserID:         userID,
@@ -60,47 +66,58 @@ func (s *ClientService) RegisterPayment(id, userID string, amount float64, notes
 	})
 }
 
-func (s *ClientService) AddDebt(id string, amount float64) error {
-	client, err := s.clientRepo.FindByID(id)
-	if err != nil {
-		return fmt.Errorf("cliente não encontrado: %w", err)
+func (s *ClientService) AddDebt(ctx context.Context, id string, amount domain.Money) error {
+	if !amount.IsPositive() {
+		return fmt.Errorf("valor inválido: %w", domain.ErrValidation)
 	}
-	client.Debt += amount
-	return s.clientRepo.Update(client)
-}
-
-func (s *ClientService) GetClientOrders(id string) ([]domain.Order, error) {
-	client, err := s.clientRepo.FindByID(id)
+	client, err := s.clientRepo.FindByID(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("cliente não encontrado: %w", err)
+		return err
 	}
-	return s.orderRepo.FindByClientMatch(client.Phone, client.Name)
+	client.AddDebt(amount)
+	return s.clientRepo.Update(ctx, client)
 }
 
-func (s *ClientService) GetClientPayments(clientID string) ([]domain.ClientPayment, error) {
-	return s.clientRepo.FindPaymentsByClientID(clientID)
+func (s *ClientService) GetClientOrders(ctx context.Context, id string) ([]domain.Order, error) {
+	client, err := s.clientRepo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return s.orderRepo.FindByClientMatch(ctx, client.Phone.String(), client.Name)
 }
 
-func (s *ClientService) GetAllPayments(userID string) ([]domain.ClientPayment, error) {
-	return s.clientRepo.FindAllPayments(userID)
+func (s *ClientService) GetClientPayments(ctx context.Context, clientID string) ([]domain.ClientPayment, error) {
+	return s.paymentRepo.FindByClientID(ctx, clientID)
 }
 
-func (s *ClientService) DeleteClient(id string) error {
-	return s.clientRepo.Delete(id)
+func (s *ClientService) GetAllPayments(ctx context.Context, userID string) ([]domain.ClientPayment, error) {
+	return s.paymentRepo.FindAll(ctx, userID)
 }
 
-func (s *ClientService) ClearPaymentHistory(id string) error {
-	return s.clientRepo.DeletePaymentsByClientID(id)
+func (s *ClientService) DeleteClient(ctx context.Context, id string) error {
+	if err := s.quoteRepo.DeleteByClientID(ctx, id); err != nil {
+		return err
+	}
+	if err := s.ClearClientOrders(ctx, id); err != nil {
+		return err
+	}
+	if err := s.ClearPaymentHistory(ctx, id); err != nil {
+		return err
+	}
+	return s.clientRepo.Delete(ctx, id)
 }
 
-// ClearClientOrders remove os pedidos do catálogo associados ao cliente (mesmo critério de GetClientOrders).
-func (s *ClientService) ClearClientOrders(id string) error {
-	orders, err := s.GetClientOrders(id)
+func (s *ClientService) ClearPaymentHistory(ctx context.Context, id string) error {
+	return s.paymentRepo.DeleteByClientID(ctx, id)
+}
+
+func (s *ClientService) ClearClientOrders(ctx context.Context, id string) error {
+	orders, err := s.GetClientOrders(ctx, id)
 	if err != nil {
 		return err
 	}
 	for _, o := range orders {
-		if err := s.orderRepo.Delete(o.ID); err != nil {
+		if err := s.orderRepo.Delete(ctx, o.ID); err != nil {
 			return err
 		}
 	}

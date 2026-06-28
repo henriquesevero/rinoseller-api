@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -15,10 +16,10 @@ import (
 )
 
 type Claims struct {
-	UserID string `json:"user_id"`
-	Name   string `json:"name"`
-	Email  string `json:"email"`
-	Role   string `json:"role"`
+	UserID string          `json:"user_id"`
+	Name   string          `json:"name"`
+	Email  string          `json:"email"`
+	Role   domain.UserRole `json:"role"`
 	jwt.RegisteredClaims
 }
 
@@ -27,24 +28,24 @@ type AuthService struct {
 	jwtSecret []byte
 }
 
-func NewAuthService(userRepo ports.UserRepository) *AuthService {
+func NewAuthService(userRepo ports.UserRepository) (*AuthService, error) {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
-		secret = "mirra-secret-key-change-in-production"
+		return nil, errors.New("JWT_SECRET não configurada")
 	}
-	return &AuthService{userRepo: userRepo, jwtSecret: []byte(secret)}
+	return &AuthService{userRepo: userRepo, jwtSecret: []byte(secret)}, nil
 }
 
-func (s *AuthService) Login(email, password string) (string, *domain.User, error) {
-	user, err := s.userRepo.FindByEmail(email)
+func (s *AuthService) Login(ctx context.Context, email, password string) (string, *domain.User, error) {
+	user, err := s.userRepo.FindByEmail(ctx, email)
 	if err != nil {
-		return "", nil, errors.New("credenciais inválidas")
+		return "", nil, fmt.Errorf("credenciais inválidas: %w", domain.ErrValidation)
 	}
 	if !user.Active {
-		return "", nil, errors.New("usuário inativo")
+		return "", nil, fmt.Errorf("usuário inativo: %w", domain.ErrForbidden)
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
-		return "", nil, errors.New("credenciais inválidas")
+		return "", nil, fmt.Errorf("credenciais inválidas: %w", domain.ErrValidation)
 	}
 
 	claims := Claims{
@@ -67,22 +68,21 @@ func (s *AuthService) Login(email, password string) (string, *domain.User, error
 	return tokenStr, user, nil
 }
 
-func (s *AuthService) ForgotPassword(email string) (string, error) {
-	user, err := s.userRepo.FindByEmail(email)
+func (s *AuthService) ForgotPassword(ctx context.Context, email string) (string, error) {
+	user, err := s.userRepo.FindByEmail(ctx, email)
 	if err != nil {
-		// Retorna sem erro para não revelar se o e-mail existe
 		return "", nil
 	}
 	token := fmt.Sprintf("%06d", rand.Intn(1000000))
 	expires := time.Now().Add(30 * time.Minute)
-	if err := s.userRepo.SetResetToken(user.ID, token, expires); err != nil {
+	if err := s.userRepo.SetResetToken(ctx, user.ID, token, expires); err != nil {
 		return "", err
 	}
 	return token, nil
 }
 
-func (s *AuthService) ResetPassword(token, newPassword string) error {
-	user, err := s.userRepo.FindByResetToken(token)
+func (s *AuthService) ResetPassword(ctx context.Context, token, newPassword string) error {
+	user, err := s.userRepo.FindByResetToken(ctx, token)
 	if err != nil {
 		return err
 	}
@@ -91,13 +91,13 @@ func (s *AuthService) ResetPassword(token, newPassword string) error {
 		return err
 	}
 	user.PasswordHash = string(hash)
-	if err := s.userRepo.Update(user); err != nil {
+	if err := s.userRepo.Update(ctx, user); err != nil {
 		return err
 	}
-	return s.userRepo.ClearResetToken(user.ID)
+	return s.userRepo.ClearResetToken(ctx, user.ID)
 }
 
-func (s *AuthService) ValidateToken(tokenStr string) (*domain.User, error) {
+func (s *AuthService) ValidateToken(ctx context.Context, tokenStr string) (*domain.User, error) {
 	token, err := jwt.ParseWithClaims(tokenStr, &Claims{}, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("método de assinatura inválido")
@@ -105,12 +105,12 @@ func (s *AuthService) ValidateToken(tokenStr string) (*domain.User, error) {
 		return s.jwtSecret, nil
 	})
 	if err != nil || !token.Valid {
-		return nil, errors.New("token inválido")
+		return nil, fmt.Errorf("token inválido: %w", domain.ErrForbidden)
 	}
 
 	claims, ok := token.Claims.(*Claims)
 	if !ok {
-		return nil, errors.New("token inválido")
+		return nil, fmt.Errorf("token inválido: %w", domain.ErrForbidden)
 	}
 
 	return &domain.User{

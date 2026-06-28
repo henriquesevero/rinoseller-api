@@ -1,0 +1,12 @@
+# Copie para terraform.tfvars (gitignored) e preencha com valores reais.
+# Nunca commitar terraform.tfvars.
+
+aws_region   = "us-east-1"
+project_name = "rinoseller-api"
+image_tag    = "latest"
+
+database_url = "postgres://user:password@host:5432/dbname?sslmode=require"
+jwt_secret   = "gerar-com: openssl rand -hex 32"
+
+# Domínio do frontend na Vercel, separado por vírgula se houver mais de um.
+allowed_origins = "https://app.rinoseller.com.br"

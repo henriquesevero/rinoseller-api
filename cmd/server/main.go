@@ -10,7 +10,14 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/joho/godotenv"
 
@@ -24,39 +31,79 @@ import (
 func main() {
 	_ = godotenv.Load()
 
-	db, err := database.NewPool()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	db, err := database.NewPool(ctx)
 	if err != nil {
 		log.Fatalf("Falha ao conectar ao banco: %v", err)
 	}
 	defer db.Close()
-	log.Println("✓ Conectado ao Supabase PostgreSQL")
+	log.Println("✓ Conectado ao banco de dados")
 
-	userRepo    := repository.NewPostgresUserRepository(db)
+	userRepo := repository.NewPostgresUserRepository(db)
 	productRepo := repository.NewPostgresProductRepository(db)
-	orderRepo   := repository.NewPostgresOrderRepository(db)
-	clientRepo  := repository.NewPostgresClientRepository(db)
-	quoteRepo   := repository.NewPostgresQuoteRepository(db)
+	orderRepo := repository.NewPostgresOrderRepository(db)
+	clientRepo := repository.NewPostgresClientRepository(db)
+	paymentRepo := repository.NewPostgresClientPaymentRepository(db)
+	quoteRepo := repository.NewPostgresQuoteRepository(db)
 	expenseRepo := repository.NewPostgresExpenseRepository(db)
 	capitalRepo := repository.NewPostgresCapitalContributionRepository(db)
 
-	authService    := services.NewAuthService(userRepo)
-	userService    := services.NewUserService(userRepo)
+	authService, err := services.NewAuthService(userRepo)
+	if err != nil {
+		log.Fatalf("Falha ao iniciar serviço de autenticação: %v", err)
+	}
+	userService := services.NewUserService(userRepo)
 	productService := services.NewProductService(productRepo)
-	orderService   := services.NewOrderService(orderRepo, productRepo, clientRepo)
-	clientService  := services.NewClientService(clientRepo, orderRepo)
-	quoteService   := services.NewQuoteService(quoteRepo, productRepo, clientRepo)
+	orderService := services.NewOrderService(orderRepo, productRepo, clientRepo)
+	clientService := services.NewClientService(clientRepo, orderRepo, paymentRepo, quoteRepo)
+	quoteService := services.NewQuoteService(quoteRepo, productRepo, clientRepo)
 	expenseService := services.NewExpenseService(expenseRepo)
 	capitalService := services.NewCapitalContributionService(capitalRepo)
 
-	if err := userService.EnsureDefaultAdmin(); err != nil {
+	if password, err := userService.EnsureDefaultAdmin(ctx); err != nil {
 		log.Printf("⚠ Aviso ao criar admin padrão: %v", err)
+	} else if password != "" {
+		log.Printf("✓ Admin padrão criado: admin@rinoseller.com / senha temporária: %s (troque-a após o primeiro login)", password)
 	}
 
 	handler := httphandler.NewHandler(authService, userService, productService, orderService, clientService, quoteService, expenseService, capitalService)
-	router  := httphandler.SetupRouter(handler, authService)
+	router := httphandler.SetupRouter(handler, authService)
 
-	log.Println("✓ Servidor KoravHub iniciado em http://localhost:8080")
-	if err := router.Run(":8080"); err != nil {
-		log.Fatalf("Falha ao iniciar o servidor: %v", err)
+	srv := newServer(router)
+	runWithGracefulShutdown(srv)
+}
+
+func newServer(handler http.Handler) *http.Server {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
 	}
+	return &http.Server{
+		Addr:    ":" + port,
+		Handler: handler,
+	}
+}
+
+func runWithGracefulShutdown(srv *http.Server) {
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	go func() {
+		log.Printf("✓ Servidor RinoSeller iniciado em %s", srv.Addr)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("Falha ao iniciar o servidor: %v", err)
+		}
+	}()
+
+	<-ctx.Done()
+	log.Println("Encerrando servidor...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Fatalf("Erro ao encerrar servidor: %v", err)
+	}
+	log.Println("✓ Servidor encerrado")
 }

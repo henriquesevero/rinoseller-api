@@ -14,13 +14,13 @@ func AuthMiddleware(authUC ports.AuthUseCase) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		header := c.GetHeader("Authorization")
 		if header == "" || !strings.HasPrefix(header, "Bearer ") {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "não autorizado"})
+			c.JSON(http.StatusUnauthorized, errorResponse{Error: "não autorizado"})
 			c.Abort()
 			return
 		}
-		user, err := authUC.ValidateToken(strings.TrimPrefix(header, "Bearer "))
+		user, err := authUC.ValidateToken(c.Request.Context(), strings.TrimPrefix(header, "Bearer "))
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "token inválido ou expirado"})
+			c.JSON(http.StatusUnauthorized, errorResponse{Error: "token inválido ou expirado"})
 			c.Abort()
 			return
 		}
@@ -32,8 +32,8 @@ func AuthMiddleware(authUC ports.AuthUseCase) gin.HandlerFunc {
 func AdminOnly() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user := ctxUser(c)
-		if user == nil || user.Role != "admin" {
-			c.JSON(http.StatusForbidden, gin.H{"error": "acesso restrito ao administrador"})
+		if user == nil || !user.Role.IsAdmin() {
+			c.JSON(http.StatusForbidden, errorResponse{Error: "acesso restrito ao administrador"})
 			c.Abort()
 			return
 		}
@@ -41,17 +41,15 @@ func AdminOnly() gin.HandlerFunc {
 	}
 }
 
-// ctxUser extrai o usuário autenticado do contexto Gin.
 func ctxUser(c *gin.Context) *domain.User {
 	v, _ := c.Get("user")
 	u, _ := v.(*domain.User)
 	return u
 }
 
-// filterID retorna o userID para filtrar dados; admin passa "" (vê tudo).
 func filterID(c *gin.Context) string {
 	u := ctxUser(c)
-	if u == nil || u.Role == "admin" {
+	if u == nil || u.Role.IsAdmin() {
 		return ""
 	}
 	return u.ID

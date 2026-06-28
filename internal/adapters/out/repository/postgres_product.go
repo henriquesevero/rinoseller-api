@@ -2,11 +2,12 @@ package repository
 
 import (
 	"context"
-	"errors"
+	"fmt"
 
 	"rinoseller-api/internal/core/domain"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -18,13 +19,12 @@ func NewPostgresProductRepository(db *pgxpool.Pool) *PostgresProductRepository {
 	return &PostgresProductRepository{db: db}
 }
 
-func (r *PostgresProductRepository) Save(p *domain.Product) error {
-	ctx := context.Background()
+func (r *PostgresProductRepository) Save(ctx context.Context, p *domain.Product) error {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	_, err = tx.Exec(ctx, `
 		INSERT INTO products (id, user_id, name, category, price, cost_price, stock_quantity, code, is_kit)
@@ -37,7 +37,7 @@ func (r *PostgresProductRepository) Save(p *domain.Product) error {
 			stock_quantity = EXCLUDED.stock_quantity,
 			code           = EXCLUDED.code,
 			is_kit         = EXCLUDED.is_kit
-	`, p.ID, nullStr(p.UserID), p.Name, p.Category, p.Price, p.CostPrice, p.StockQuantity, p.Code, p.IsKit)
+	`, p.ID, nullStr(p.UserID), p.Name, p.Category, p.Price.Float64(), p.CostPrice.Float64(), p.StockQuantity, p.Code, p.IsKit)
 	if err != nil {
 		return err
 	}
@@ -58,42 +58,50 @@ func (r *PostgresProductRepository) Save(p *domain.Product) error {
 	return tx.Commit(ctx)
 }
 
-func (r *PostgresProductRepository) findKitItems(ctx context.Context, kitID string) ([]domain.KitItem, error) {
+func (r *PostgresProductRepository) findKitItemsByKitIDs(ctx context.Context, kitIDs []string) (map[string][]domain.KitItem, error) {
+	if len(kitIDs) == 0 {
+		return nil, nil
+	}
 	rows, err := r.db.Query(ctx, `
-		SELECT product_id, product_name, quantity FROM kit_items WHERE kit_id = $1
-	`, kitID)
+		SELECT kit_id, product_id, product_name, quantity FROM kit_items WHERE kit_id = ANY($1)
+	`, kitIDs)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var items []domain.KitItem
+	itemsByKitID := make(map[string][]domain.KitItem)
 	for rows.Next() {
+		var kitID string
 		var ki domain.KitItem
-		if err := rows.Scan(&ki.ProductID, &ki.ProductName, &ki.Quantity); err != nil {
+		if err := rows.Scan(&kitID, &ki.ProductID, &ki.ProductName, &ki.Quantity); err != nil {
 			return nil, err
 		}
-		items = append(items, ki)
+		itemsByKitID[kitID] = append(itemsByKitID[kitID], ki)
 	}
-	return items, nil
+	return itemsByKitID, nil
 }
 
-func (r *PostgresProductRepository) FindAll(userID string) ([]domain.Product, error) {
+func (r *PostgresProductRepository) findKitItems(ctx context.Context, kitID string) ([]domain.KitItem, error) {
+	itemsByKitID, err := r.findKitItemsByKitIDs(ctx, []string{kitID})
+	if err != nil {
+		return nil, err
+	}
+	return itemsByKitID[kitID], nil
+}
+
+func (r *PostgresProductRepository) FindAll(ctx context.Context, userID string) ([]domain.Product, error) {
 	var (
-		rows interface {
-			Next() bool
-			Scan(...any) error
-			Close()
-		}
-		err error
+		rows pgx.Rows
+		err  error
 	)
 	if userID == "" {
-		rows, err = r.db.Query(context.Background(), `
+		rows, err = r.db.Query(ctx, `
 			SELECT id, COALESCE(user_id,''), name, category, price, cost_price, stock_quantity, code, is_kit
 			FROM products ORDER BY name
 		`)
 	} else {
-		rows, err = r.db.Query(context.Background(), `
+		rows, err = r.db.Query(ctx, `
 			SELECT id, COALESCE(user_id,''), name, category, price, cost_price, stock_quantity, code, is_kit
 			FROM products WHERE user_id = $1 ORDER BY name
 		`, userID)
@@ -106,39 +114,46 @@ func (r *PostgresProductRepository) FindAll(userID string) ([]domain.Product, er
 	var result []domain.Product
 	for rows.Next() {
 		var p domain.Product
-		if err := rows.Scan(&p.ID, &p.UserID, &p.Name, &p.Category, &p.Price, &p.CostPrice, &p.StockQuantity, &p.Code, &p.IsKit); err != nil {
+		var price, costPrice float64
+		if err := rows.Scan(&p.ID, &p.UserID, &p.Name, &p.Category, &price, &costPrice, &p.StockQuantity, &p.Code, &p.IsKit); err != nil {
 			return nil, err
 		}
+		p.Price = domain.NewMoneyFromFloat(price)
+		p.CostPrice = domain.NewMoneyFromFloat(costPrice)
 		result = append(result, p)
 	}
 	if result == nil {
 		return []domain.Product{}, nil
 	}
 
-	ctx := context.Background()
+	var kitIDs []string
+	for _, p := range result {
+		if p.IsKit {
+			kitIDs = append(kitIDs, p.ID)
+		}
+	}
+	itemsByKitID, err := r.findKitItemsByKitIDs(ctx, kitIDs)
+	if err != nil {
+		return nil, err
+	}
 	for i := range result {
-		if !result[i].IsKit {
-			continue
-		}
-		items, err := r.findKitItems(ctx, result[i].ID)
-		if err != nil {
-			return nil, err
-		}
-		result[i].KitItems = items
+		result[i].KitItems = itemsByKitID[result[i].ID]
 	}
 	return result, nil
 }
 
-func (r *PostgresProductRepository) FindByID(id string) (*domain.Product, error) {
-	ctx := context.Background()
+func (r *PostgresProductRepository) FindByID(ctx context.Context, id string) (*domain.Product, error) {
 	var p domain.Product
+	var price, costPrice float64
 	err := r.db.QueryRow(ctx, `
 		SELECT id, COALESCE(user_id,''), name, category, price, cost_price, stock_quantity, code, is_kit
 		FROM products WHERE id = $1
-	`, id).Scan(&p.ID, &p.UserID, &p.Name, &p.Category, &p.Price, &p.CostPrice, &p.StockQuantity, &p.Code, &p.IsKit)
+	`, id).Scan(&p.ID, &p.UserID, &p.Name, &p.Category, &price, &costPrice, &p.StockQuantity, &p.Code, &p.IsKit)
 	if err != nil {
-		return nil, errors.New("produto não encontrado")
+		return nil, fmt.Errorf("produto não encontrado: %w", domain.ErrNotFound)
 	}
+	p.Price = domain.NewMoneyFromFloat(price)
+	p.CostPrice = domain.NewMoneyFromFloat(costPrice)
 	if p.IsKit {
 		items, err := r.findKitItems(ctx, p.ID)
 		if err != nil {
@@ -149,35 +164,35 @@ func (r *PostgresProductRepository) FindByID(id string) (*domain.Product, error)
 	return &p, nil
 }
 
-func (r *PostgresProductRepository) UpdateStock(id string, newStock int) error {
-	tag, err := r.db.Exec(context.Background(), `UPDATE products SET stock_quantity=$1 WHERE id=$2`, newStock, id)
+func (r *PostgresProductRepository) UpdateStock(ctx context.Context, id string, newStock int) error {
+	tag, err := r.db.Exec(ctx, `UPDATE products SET stock_quantity=$1 WHERE id=$2`, newStock, id)
 	if err != nil {
 		return err
 	}
 	if tag.RowsAffected() == 0 {
-		return errors.New("produto não encontrado")
+		return fmt.Errorf("produto não encontrado: %w", domain.ErrNotFound)
 	}
 	return nil
 }
 
-func (r *PostgresProductRepository) UpdatePrice(id string, price float64) error {
-	tag, err := r.db.Exec(context.Background(), `UPDATE products SET price=$1 WHERE id=$2`, price, id)
+func (r *PostgresProductRepository) UpdatePrice(ctx context.Context, id string, price domain.Money) error {
+	tag, err := r.db.Exec(ctx, `UPDATE products SET price=$1 WHERE id=$2`, price.Float64(), id)
 	if err != nil {
 		return err
 	}
 	if tag.RowsAffected() == 0 {
-		return errors.New("produto não encontrado")
+		return fmt.Errorf("produto não encontrado: %w", domain.ErrNotFound)
 	}
 	return nil
 }
 
-func (r *PostgresProductRepository) Delete(id string) error {
-	tag, err := r.db.Exec(context.Background(), `DELETE FROM products WHERE id = $1`, id)
+func (r *PostgresProductRepository) Delete(ctx context.Context, id string) error {
+	tag, err := r.db.Exec(ctx, `DELETE FROM products WHERE id = $1`, id)
 	if err != nil {
 		return err
 	}
 	if tag.RowsAffected() == 0 {
-		return errors.New("produto não encontrado")
+		return fmt.Errorf("produto não encontrado: %w", domain.ErrNotFound)
 	}
 	return nil
 }

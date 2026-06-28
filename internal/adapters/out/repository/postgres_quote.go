@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 	"encoding/json"
-	"errors"
+	"fmt"
 
 	"rinoseller-api/internal/core/domain"
 
@@ -41,19 +41,18 @@ func NewPostgresQuoteRepository(db *pgxpool.Pool) *PostgresQuoteRepository {
 	return &PostgresQuoteRepository{db: db}
 }
 
-func (r *PostgresQuoteRepository) Save(q *domain.Quote) error {
-	ctx := context.Background()
+func (r *PostgresQuoteRepository) Save(ctx context.Context, q *domain.Quote) error {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	_, err = tx.Exec(ctx, `
-		INSERT INTO quotes (id, user_id, client_id, client_name, total, status, notes, payment_type, installments, created_at, approved_at, invoiced_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-	`, q.ID, nullStr(q.UserID), q.ClientID, q.ClientName, q.Total, q.Status, q.Notes,
-		q.PaymentType, q.Installments, q.CreatedAt, q.ApprovedAt, q.InvoicedAt)
+		INSERT INTO quotes (id, user_id, client_id, client_name, total, status, notes, payment_type, installments, created_at, approved_at, invoiced_at, delivered_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+	`, q.ID, nullStr(q.UserID), q.ClientID, q.ClientName, q.Total.Float64(), string(q.Status), q.Notes,
+		string(q.PaymentType), q.Installments, q.CreatedAt, q.ApprovedAt, q.InvoicedAt, q.DeliveredAt)
 	if err != nil {
 		return err
 	}
@@ -62,7 +61,7 @@ func (r *PostgresQuoteRepository) Save(q *domain.Quote) error {
 		_, err = tx.Exec(ctx, `
 			INSERT INTO quote_items (id, quote_id, product_id, product_name, quantity, unit_price, subtotal, kit_items)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		`, uuid.New().String(), q.ID, item.ProductID, item.ProductName, item.Quantity, item.UnitPrice, item.Subtotal, marshalKitItems(item.KitItems))
+		`, uuid.New().String(), q.ID, item.ProductID, item.ProductName, item.Quantity, item.UnitPrice.Float64(), item.Subtotal.Float64(), marshalKitItems(item.KitItems))
 		if err != nil {
 			return err
 		}
@@ -71,23 +70,22 @@ func (r *PostgresQuoteRepository) Save(q *domain.Quote) error {
 	return tx.Commit(ctx)
 }
 
-// FindAll retorna orçamentos do usuário; userID="" retorna todos (admin).
-func (r *PostgresQuoteRepository) FindAll(userID string) ([]domain.Quote, error) {
+func (r *PostgresQuoteRepository) FindAll(ctx context.Context, userID string) ([]domain.Quote, error) {
 	if userID == "" {
-		return r.query(context.Background(), `
-			SELECT id, COALESCE(user_id,''), client_id, client_name, total, status, notes, payment_type, installments, created_at, approved_at, invoiced_at
+		return r.query(ctx, `
+			SELECT id, COALESCE(user_id,''), client_id, client_name, total, status, notes, payment_type, installments, created_at, approved_at, invoiced_at, delivered_at
 			FROM quotes ORDER BY created_at DESC
 		`)
 	}
-	return r.query(context.Background(), `
-		SELECT id, COALESCE(user_id,''), client_id, client_name, total, status, notes, payment_type, installments, created_at, approved_at, invoiced_at
+	return r.query(ctx, `
+		SELECT id, COALESCE(user_id,''), client_id, client_name, total, status, notes, payment_type, installments, created_at, approved_at, invoiced_at, delivered_at
 		FROM quotes WHERE user_id = $1 ORDER BY created_at DESC
 	`, userID)
 }
 
-func (r *PostgresQuoteRepository) FindByClientID(clientID string) ([]domain.Quote, error) {
-	return r.query(context.Background(), `
-		SELECT id, COALESCE(user_id,''), client_id, client_name, total, status, notes, payment_type, installments, created_at, approved_at, invoiced_at
+func (r *PostgresQuoteRepository) FindByClientID(ctx context.Context, clientID string) ([]domain.Quote, error) {
+	return r.query(ctx, `
+		SELECT id, COALESCE(user_id,''), client_id, client_name, total, status, notes, payment_type, installments, created_at, approved_at, invoiced_at, delivered_at
 		FROM quotes WHERE client_id = $1 ORDER BY created_at DESC
 	`, clientID)
 }
@@ -103,9 +101,8 @@ func (r *PostgresQuoteRepository) query(ctx context.Context, sql string, args ..
 	var ids []string
 
 	for rows.Next() {
-		var q domain.Quote
-		if err := rows.Scan(&q.ID, &q.UserID, &q.ClientID, &q.ClientName, &q.Total, &q.Status, &q.Notes,
-			&q.PaymentType, &q.Installments, &q.CreatedAt, &q.ApprovedAt, &q.InvoicedAt); err != nil {
+		q, err := scanQuote(rows)
+		if err != nil {
 			return nil, err
 		}
 		q.Items = []domain.QuoteItem{}
@@ -128,12 +125,10 @@ func (r *PostgresQuoteRepository) query(ctx context.Context, sql string, args ..
 
 	for itemRows.Next() {
 		var quoteID string
-		var item domain.QuoteItem
-		var kitItemsRaw string
-		if err := itemRows.Scan(&quoteID, &item.ProductID, &item.ProductName, &item.Quantity, &item.UnitPrice, &item.Subtotal, &kitItemsRaw); err != nil {
+		item, err := scanQuoteItem(itemRows, &quoteID)
+		if err != nil {
 			return nil, err
 		}
-		item.KitItems = unmarshalKitItems([]byte(kitItemsRaw))
 		if q, ok := quoteMap[quoteID]; ok {
 			q.Items = append(q.Items, item)
 		}
@@ -146,16 +141,14 @@ func (r *PostgresQuoteRepository) query(ctx context.Context, sql string, args ..
 	return result, nil
 }
 
-func (r *PostgresQuoteRepository) FindByID(id string) (*domain.Quote, error) {
-	ctx := context.Background()
-	var q domain.Quote
-	err := r.db.QueryRow(ctx, `
-		SELECT id, COALESCE(user_id,''), client_id, client_name, total, status, notes, payment_type, installments, created_at, approved_at, invoiced_at
+func (r *PostgresQuoteRepository) FindByID(ctx context.Context, id string) (*domain.Quote, error) {
+	row := r.db.QueryRow(ctx, `
+		SELECT id, COALESCE(user_id,''), client_id, client_name, total, status, notes, payment_type, installments, created_at, approved_at, invoiced_at, delivered_at
 		FROM quotes WHERE id = $1
-	`, id).Scan(&q.ID, &q.UserID, &q.ClientID, &q.ClientName, &q.Total, &q.Status, &q.Notes,
-		&q.PaymentType, &q.Installments, &q.CreatedAt, &q.ApprovedAt, &q.InvoicedAt)
+	`, id)
+	q, err := scanQuote(row)
 	if err != nil {
-		return nil, errors.New("orçamento não encontrado")
+		return nil, fmt.Errorf("orçamento não encontrado: %w", domain.ErrNotFound)
 	}
 
 	itemRows, err := r.db.Query(ctx, `
@@ -169,43 +162,75 @@ func (r *PostgresQuoteRepository) FindByID(id string) (*domain.Quote, error) {
 
 	q.Items = []domain.QuoteItem{}
 	for itemRows.Next() {
-		var item domain.QuoteItem
-		var kitItemsRaw string
-		if err := itemRows.Scan(&item.ProductID, &item.ProductName, &item.Quantity, &item.UnitPrice, &item.Subtotal, &kitItemsRaw); err != nil {
+		item, err := scanQuoteItem(itemRows, nil)
+		if err != nil {
 			return nil, err
 		}
-		item.KitItems = unmarshalKitItems([]byte(kitItemsRaw))
 		q.Items = append(q.Items, item)
 	}
 
 	return &q, nil
 }
 
-func (r *PostgresQuoteRepository) Update(q *domain.Quote) error {
-	tag, err := r.db.Exec(context.Background(), `
-		UPDATE quotes SET status=$1, approved_at=$2, invoiced_at=$3 WHERE id=$4
-	`, q.Status, q.ApprovedAt, q.InvoicedAt, q.ID)
+func (r *PostgresQuoteRepository) Update(ctx context.Context, q *domain.Quote) error {
+	tag, err := r.db.Exec(ctx, `
+		UPDATE quotes SET status=$1, approved_at=$2, invoiced_at=$3, delivered_at=$4 WHERE id=$5
+	`, string(q.Status), q.ApprovedAt, q.InvoicedAt, q.DeliveredAt, q.ID)
 	if err != nil {
 		return err
 	}
 	if tag.RowsAffected() == 0 {
-		return errors.New("orçamento não encontrado")
+		return fmt.Errorf("orçamento não encontrado: %w", domain.ErrNotFound)
 	}
 	return nil
 }
 
-func (r *PostgresQuoteRepository) DeleteByClientID(clientID string) error {
-	_, err := r.db.Exec(context.Background(), `DELETE FROM quotes WHERE client_id = $1`, clientID)
+func (r *PostgresQuoteRepository) DeleteByClientID(ctx context.Context, clientID string) error {
+	_, err := r.db.Exec(ctx, `DELETE FROM quotes WHERE client_id = $1`, clientID)
 	return err
 }
 
-func (r *PostgresQuoteRepository) Delete(id string) error {
-	tag, err := r.db.Exec(context.Background(), `DELETE FROM quotes WHERE id = $1`, id)
+func (r *PostgresQuoteRepository) Delete(ctx context.Context, id string) error {
+	tag, err := r.db.Exec(ctx, `DELETE FROM quotes WHERE id = $1`, id)
 	if err != nil {
 		return err
 	}
 	if tag.RowsAffected() == 0 {
-		return errors.New("orçamento não encontrado")
+		return fmt.Errorf("orçamento não encontrado: %w", domain.ErrNotFound)
 	}
 	return nil
+}
+
+func scanQuote(row rowScanner) (domain.Quote, error) {
+	var q domain.Quote
+	var total float64
+	var status, paymentType string
+	err := row.Scan(&q.ID, &q.UserID, &q.ClientID, &q.ClientName, &total, &status, &q.Notes,
+		&paymentType, &q.Installments, &q.CreatedAt, &q.ApprovedAt, &q.InvoicedAt, &q.DeliveredAt)
+	if err != nil {
+		return domain.Quote{}, err
+	}
+	q.Total = domain.NewMoneyFromFloat(total)
+	q.Status = domain.QuoteStatus(status)
+	q.PaymentType = domain.PaymentType(paymentType)
+	return q, nil
+}
+
+func scanQuoteItem(row rowScanner, quoteID *string) (domain.QuoteItem, error) {
+	var item domain.QuoteItem
+	var unitPrice, subtotal float64
+	var kitItemsRaw string
+	var err error
+	if quoteID != nil {
+		err = row.Scan(quoteID, &item.ProductID, &item.ProductName, &item.Quantity, &unitPrice, &subtotal, &kitItemsRaw)
+	} else {
+		err = row.Scan(&item.ProductID, &item.ProductName, &item.Quantity, &unitPrice, &subtotal, &kitItemsRaw)
+	}
+	if err != nil {
+		return domain.QuoteItem{}, err
+	}
+	item.UnitPrice = domain.NewMoneyFromFloat(unitPrice)
+	item.Subtotal = domain.NewMoneyFromFloat(subtotal)
+	item.KitItems = unmarshalKitItems([]byte(kitItemsRaw))
+	return item, nil
 }

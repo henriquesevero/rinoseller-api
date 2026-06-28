@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -24,50 +25,47 @@ func NewOrderService(orderRepo ports.OrderRepository, productRepo ports.ProductR
 	}
 }
 
-// CreateOrder aplica as regras de negócio: subtrai estoque e determina o status do pedido.
-// Se qualquer item não tiver estoque suficiente, o pedido inteiro é marcado como "Encomenda".
-func (s *OrderService) CreateOrder(order *domain.Order) error {
+func (s *OrderService) CreateOrder(ctx context.Context, order *domain.Order) error {
 	if order.ClientPhone != "" {
-		if client, err := s.clientRepo.FindByPhone(order.ClientPhone); err == nil {
-			if client.DebtLimit > 0 && client.Debt >= client.DebtLimit {
-				return fmt.Errorf("cliente \"%s\" atingiu o limite de dívida (%.2f de %.2f) e não pode receber novos pedidos ou orçamentos", client.Name, client.Debt, client.DebtLimit)
+		if client, err := s.clientRepo.FindByPhone(ctx, order.ClientPhone); err == nil {
+			if err := client.EnsureCanReceiveNewOrder(); err != nil {
+				return err
 			}
 		}
 	}
 
 	order.ID = uuid.New().String()
 	order.CreatedAt = time.Now()
-	order.Status = "Pronta-Entrega"
+	order.Status = domain.OrderStatusReady
 
-	var total float64
+	var total domain.Money
 	for i, item := range order.Items {
-		product, err := s.productRepo.FindByID(item.ProductID)
+		product, err := s.productRepo.FindByID(ctx, item.ProductID)
 		if err != nil {
-			return fmt.Errorf("produto %s não encontrado: %w", item.ProductID, err)
+			return fmt.Errorf("produto %s não encontrado: %w", item.ProductID, domain.ErrValidation)
 		}
 
 		order.Items[i].ProductName = product.Name
 		order.Items[i].Price = product.Price
-		total += product.Price * float64(item.Quantity)
+		total = total.Add(product.Price.MulQty(item.Quantity))
 
-		newStock := product.StockQuantity - item.Quantity
-		if newStock < 0 {
-			order.Status = "Encomenda"
-			newStock = 0
+		insufficient, err := applyStockMovements(ctx, s.productRepo, product, item.Quantity)
+		if err != nil {
+			return err
 		}
-		if err := s.productRepo.UpdateStock(product.ID, newStock); err != nil {
-			return fmt.Errorf("erro ao atualizar estoque do produto %s: %w", product.ID, err)
+		if insufficient {
+			order.Status = domain.OrderStatusBackorder
 		}
 	}
 
 	order.Total = total
-	return s.orderRepo.Save(order)
+	return s.orderRepo.Save(ctx, order)
 }
 
-func (s *OrderService) ListOrders(userID string) ([]domain.Order, error) {
-	return s.orderRepo.FindAll(userID)
+func (s *OrderService) ListOrders(ctx context.Context, userID string) ([]domain.Order, error) {
+	return s.orderRepo.FindAll(ctx, userID)
 }
 
-func (s *OrderService) DeleteOrder(id string) error {
-	return s.orderRepo.Delete(id)
+func (s *OrderService) DeleteOrder(ctx context.Context, id string) error {
+	return s.orderRepo.Delete(ctx, id)
 }

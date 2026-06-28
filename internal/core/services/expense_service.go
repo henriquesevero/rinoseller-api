@@ -1,7 +1,8 @@
 package services
 
 import (
-	"errors"
+	"context"
+	"fmt"
 	"time"
 
 	"rinoseller-api/internal/core/domain"
@@ -18,32 +19,32 @@ func NewExpenseService(expenseRepo ports.ExpenseRepository) *ExpenseService {
 	return &ExpenseService{expenseRepo: expenseRepo}
 }
 
-func (s *ExpenseService) ListExpenses(userID string) ([]domain.Expense, error) {
-	return s.expenseRepo.FindAll(userID)
+func (s *ExpenseService) ListExpenses(ctx context.Context, userID string) ([]domain.Expense, error) {
+	return s.expenseRepo.FindAll(ctx, userID)
 }
 
-func (s *ExpenseService) CreateExpense(e *domain.Expense) error {
+func (s *ExpenseService) CreateExpense(ctx context.Context, e *domain.Expense) error {
+	if e.Description == "" || !e.Amount.IsPositive() {
+		return fmt.Errorf("descrição e valor são obrigatórios: %w", domain.ErrValidation)
+	}
 	e.ID = uuid.New().String()
-	e.Status = "Pendente"
+	e.Status = domain.ExpenseStatusPending
 	e.PaidAt = nil
 	e.CreatedAt = time.Now()
-	return s.expenseRepo.Save(e)
+	return s.expenseRepo.Save(ctx, e)
 }
 
-func (s *ExpenseService) PayExpense(id string) (*domain.Expense, error) {
-	e, err := s.expenseRepo.FindByID(id)
+func (s *ExpenseService) PayExpense(ctx context.Context, id string) (*domain.Expense, error) {
+	e, err := s.expenseRepo.FindByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	if e.Status == "Pago" {
-		return nil, errors.New("esta conta já está paga")
+	if err := e.Pay(); err != nil {
+		return nil, err
 	}
-	now := time.Now()
-	e.Status = "Pago"
-	e.PaidAt = &now
-	return e, s.expenseRepo.Update(e)
+	return e, s.expenseRepo.Update(ctx, e)
 }
 
-func (s *ExpenseService) DeleteExpense(id string) error {
-	return s.expenseRepo.Delete(id)
+func (s *ExpenseService) DeleteExpense(ctx context.Context, id string) error {
+	return s.expenseRepo.Delete(ctx, id)
 }

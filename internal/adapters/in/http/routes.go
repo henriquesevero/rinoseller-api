@@ -3,13 +3,13 @@ package httphandler
 import (
 	"net/http"
 	"os"
-	"strings"
 	"rinoseller-api/internal/core/ports"
+	"strings"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	ginSwagger "github.com/swaggo/gin-swagger"
 	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func allowedOrigins() []string {
@@ -39,19 +39,16 @@ func SetupRouter(h *Handler, authUC ports.AuthUseCase) *gin.Engine {
 
 	api := r.Group("/api")
 
-	// Rotas públicas (sem autenticação)
 	api.POST("/auth/register", h.Register)
 	api.POST("/auth/login", h.Login)
 	api.POST("/auth/forgot-password", h.ForgotPassword)
 	api.POST("/auth/reset-password", h.ResetPassword)
 
-	// Rotas protegidas por JWT
 	auth := api.Group("")
 	auth.Use(AuthMiddleware(authUC))
 	{
 		auth.GET("/auth/me", h.GetMe)
 
-		// Usuários — somente admin
 		admin := auth.Group("")
 		admin.Use(AdminOnly())
 		{

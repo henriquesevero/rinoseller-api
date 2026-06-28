@@ -2,7 +2,7 @@ package repository
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -18,40 +18,44 @@ func NewPostgresUserRepository(db *pgxpool.Pool) *PostgresUserRepository {
 	return &PostgresUserRepository{db: db}
 }
 
-func (r *PostgresUserRepository) Save(u *domain.User) error {
-	_, err := r.db.Exec(context.Background(), `
+func (r *PostgresUserRepository) Save(ctx context.Context, u *domain.User) error {
+	_, err := r.db.Exec(ctx, `
 		INSERT INTO users (id, name, email, password_hash, role, active, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
-	`, u.ID, u.Name, u.Email, u.PasswordHash, u.Role, u.Active, u.CreatedAt)
+	`, u.ID, u.Name, u.Email, u.PasswordHash, string(u.Role), u.Active, u.CreatedAt)
 	return err
 }
 
-func (r *PostgresUserRepository) FindByEmail(email string) (*domain.User, error) {
+func (r *PostgresUserRepository) FindByEmail(ctx context.Context, email string) (*domain.User, error) {
 	var u domain.User
-	err := r.db.QueryRow(context.Background(), `
+	var role string
+	err := r.db.QueryRow(ctx, `
 		SELECT id, name, email, password_hash, role, active, created_at
 		FROM users WHERE email = $1
-	`, email).Scan(&u.ID, &u.Name, &u.Email, &u.PasswordHash, &u.Role, &u.Active, &u.CreatedAt)
+	`, email).Scan(&u.ID, &u.Name, &u.Email, &u.PasswordHash, &role, &u.Active, &u.CreatedAt)
 	if err != nil {
-		return nil, errors.New("usuário não encontrado")
+		return nil, fmt.Errorf("usuário não encontrado: %w", domain.ErrNotFound)
 	}
+	u.Role = domain.UserRole(role)
 	return &u, nil
 }
 
-func (r *PostgresUserRepository) FindByID(id string) (*domain.User, error) {
+func (r *PostgresUserRepository) FindByID(ctx context.Context, id string) (*domain.User, error) {
 	var u domain.User
-	err := r.db.QueryRow(context.Background(), `
+	var role string
+	err := r.db.QueryRow(ctx, `
 		SELECT id, name, email, password_hash, role, active, created_at
 		FROM users WHERE id = $1
-	`, id).Scan(&u.ID, &u.Name, &u.Email, &u.PasswordHash, &u.Role, &u.Active, &u.CreatedAt)
+	`, id).Scan(&u.ID, &u.Name, &u.Email, &u.PasswordHash, &role, &u.Active, &u.CreatedAt)
 	if err != nil {
-		return nil, errors.New("usuário não encontrado")
+		return nil, fmt.Errorf("usuário não encontrado: %w", domain.ErrNotFound)
 	}
+	u.Role = domain.UserRole(role)
 	return &u, nil
 }
 
-func (r *PostgresUserRepository) FindAll() ([]domain.User, error) {
-	rows, err := r.db.Query(context.Background(), `
+func (r *PostgresUserRepository) FindAll(ctx context.Context) ([]domain.User, error) {
+	rows, err := r.db.Query(ctx, `
 		SELECT id, name, email, role, active, created_at FROM users ORDER BY created_at ASC
 	`)
 	if err != nil {
@@ -62,9 +66,11 @@ func (r *PostgresUserRepository) FindAll() ([]domain.User, error) {
 	var users []domain.User
 	for rows.Next() {
 		var u domain.User
-		if err := rows.Scan(&u.ID, &u.Name, &u.Email, &u.Role, &u.Active, &u.CreatedAt); err != nil {
+		var role string
+		if err := rows.Scan(&u.ID, &u.Name, &u.Email, &role, &u.Active, &u.CreatedAt); err != nil {
 			return nil, err
 		}
+		u.Role = domain.UserRole(role)
 		users = append(users, u)
 	}
 	if users == nil {
@@ -73,40 +79,42 @@ func (r *PostgresUserRepository) FindAll() ([]domain.User, error) {
 	return users, nil
 }
 
-func (r *PostgresUserRepository) Update(u *domain.User) error {
-	_, err := r.db.Exec(context.Background(), `
+func (r *PostgresUserRepository) Update(ctx context.Context, u *domain.User) error {
+	_, err := r.db.Exec(ctx, `
 		UPDATE users SET name=$1, email=$2, password_hash=$3, role=$4, active=$5 WHERE id=$6
-	`, u.Name, u.Email, u.PasswordHash, u.Role, u.Active, u.ID)
+	`, u.Name, u.Email, u.PasswordHash, string(u.Role), u.Active, u.ID)
 	return err
 }
 
-func (r *PostgresUserRepository) HasAnyAdmin() (bool, error) {
+func (r *PostgresUserRepository) HasAnyAdmin(ctx context.Context) (bool, error) {
 	var count int
-	err := r.db.QueryRow(context.Background(), `SELECT COUNT(*) FROM users WHERE role='admin'`).Scan(&count)
+	err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM users WHERE role='admin'`).Scan(&count)
 	return count > 0, err
 }
 
-func (r *PostgresUserRepository) SetResetToken(id, token string, expires time.Time) error {
-	_, err := r.db.Exec(context.Background(),
+func (r *PostgresUserRepository) SetResetToken(ctx context.Context, id, token string, expires time.Time) error {
+	_, err := r.db.Exec(ctx,
 		`UPDATE users SET reset_token=$1, reset_expires_at=$2 WHERE id=$3`,
 		token, expires, id)
 	return err
 }
 
-func (r *PostgresUserRepository) FindByResetToken(token string) (*domain.User, error) {
+func (r *PostgresUserRepository) FindByResetToken(ctx context.Context, token string) (*domain.User, error) {
 	var u domain.User
-	err := r.db.QueryRow(context.Background(), `
+	var role string
+	err := r.db.QueryRow(ctx, `
 		SELECT id, name, email, password_hash, role, active, created_at
 		FROM users WHERE reset_token=$1 AND reset_expires_at > NOW()
-	`, token).Scan(&u.ID, &u.Name, &u.Email, &u.PasswordHash, &u.Role, &u.Active, &u.CreatedAt)
+	`, token).Scan(&u.ID, &u.Name, &u.Email, &u.PasswordHash, &role, &u.Active, &u.CreatedAt)
 	if err != nil {
-		return nil, errors.New("código inválido ou expirado")
+		return nil, fmt.Errorf("código inválido ou expirado: %w", domain.ErrNotFound)
 	}
+	u.Role = domain.UserRole(role)
 	return &u, nil
 }
 
-func (r *PostgresUserRepository) ClearResetToken(id string) error {
-	_, err := r.db.Exec(context.Background(),
+func (r *PostgresUserRepository) ClearResetToken(ctx context.Context, id string) error {
+	_, err := r.db.Exec(ctx,
 		`UPDATE users SET reset_token=NULL, reset_expires_at=NULL WHERE id=$1`, id)
 	return err
 }

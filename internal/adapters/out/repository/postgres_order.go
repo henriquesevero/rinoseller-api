@@ -2,7 +2,7 @@ package repository
 
 import (
 	"context"
-	"errors"
+	"fmt"
 
 	"rinoseller-api/internal/core/domain"
 
@@ -18,18 +18,17 @@ func NewPostgresOrderRepository(db *pgxpool.Pool) *PostgresOrderRepository {
 	return &PostgresOrderRepository{db: db}
 }
 
-func (r *PostgresOrderRepository) Save(o *domain.Order) error {
-	ctx := context.Background()
+func (r *PostgresOrderRepository) Save(ctx context.Context, o *domain.Order) error {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	_, err = tx.Exec(ctx, `
 		INSERT INTO orders (id, user_id, client_name, client_phone, total, status, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
-	`, o.ID, nullStr(o.UserID), o.ClientName, o.ClientPhone, o.Total, o.Status, o.CreatedAt)
+	`, o.ID, nullStr(o.UserID), o.ClientName, o.ClientPhone, o.Total.Float64(), string(o.Status), o.CreatedAt)
 	if err != nil {
 		return err
 	}
@@ -38,7 +37,7 @@ func (r *PostgresOrderRepository) Save(o *domain.Order) error {
 		_, err = tx.Exec(ctx, `
 			INSERT INTO order_items (id, order_id, product_id, product_name, quantity, price)
 			VALUES ($1, $2, $3, $4, $5, $6)
-		`, uuid.New().String(), o.ID, item.ProductID, item.ProductName, item.Quantity, item.Price)
+		`, uuid.New().String(), o.ID, item.ProductID, item.ProductName, item.Quantity, item.Price.Float64())
 		if err != nil {
 			return err
 		}
@@ -47,9 +46,7 @@ func (r *PostgresOrderRepository) Save(o *domain.Order) error {
 	return tx.Commit(ctx)
 }
 
-// FindAll retorna pedidos do usuário; userID="" retorna todos (admin).
-func (r *PostgresOrderRepository) FindAll(userID string) ([]domain.Order, error) {
-	ctx := context.Background()
+func (r *PostgresOrderRepository) FindAll(ctx context.Context, userID string) ([]domain.Order, error) {
 	if userID == "" {
 		return r.query(ctx, `
 			SELECT id, COALESCE(user_id,''), client_name, client_phone, total, status, created_at
@@ -62,10 +59,8 @@ func (r *PostgresOrderRepository) FindAll(userID string) ([]domain.Order, error)
 	`, userID)
 }
 
-// FindByClientMatch retorna pedidos do catálogo associados ao cliente: por telefone
-// quando o cliente possui telefone cadastrado, ou por nome (case-insensitive) caso contrário.
-func (r *PostgresOrderRepository) FindByClientMatch(phone, name string) ([]domain.Order, error) {
-	return r.query(context.Background(), `
+func (r *PostgresOrderRepository) FindByClientMatch(ctx context.Context, phone, name string) ([]domain.Order, error) {
+	return r.query(ctx, `
 		SELECT id, COALESCE(user_id,''), client_name, client_phone, total, status, created_at
 		FROM orders
 		WHERE ($1 <> '' AND client_phone = $1) OR ($1 = '' AND LOWER(client_name) = LOWER($2))
@@ -85,9 +80,13 @@ func (r *PostgresOrderRepository) query(ctx context.Context, sql string, args ..
 
 	for rows.Next() {
 		var o domain.Order
-		if err := rows.Scan(&o.ID, &o.UserID, &o.ClientName, &o.ClientPhone, &o.Total, &o.Status, &o.CreatedAt); err != nil {
+		var total float64
+		var status string
+		if err := rows.Scan(&o.ID, &o.UserID, &o.ClientName, &o.ClientPhone, &total, &status, &o.CreatedAt); err != nil {
 			return nil, err
 		}
+		o.Total = domain.NewMoneyFromFloat(total)
+		o.Status = domain.OrderStatus(status)
 		o.Items = []domain.OrderItem{}
 		orderMap[o.ID] = &o
 		ids = append(ids, o.ID)
@@ -109,9 +108,11 @@ func (r *PostgresOrderRepository) query(ctx context.Context, sql string, args ..
 	for itemRows.Next() {
 		var orderID string
 		var item domain.OrderItem
-		if err := itemRows.Scan(&orderID, &item.ProductID, &item.ProductName, &item.Quantity, &item.Price); err != nil {
+		var price float64
+		if err := itemRows.Scan(&orderID, &item.ProductID, &item.ProductName, &item.Quantity, &price); err != nil {
 			return nil, err
 		}
+		item.Price = domain.NewMoneyFromFloat(price)
 		if o, ok := orderMap[orderID]; ok {
 			o.Items = append(o.Items, item)
 		}
@@ -124,13 +125,13 @@ func (r *PostgresOrderRepository) query(ctx context.Context, sql string, args ..
 	return result, nil
 }
 
-func (r *PostgresOrderRepository) Delete(id string) error {
-	tag, err := r.db.Exec(context.Background(), `DELETE FROM orders WHERE id = $1`, id)
+func (r *PostgresOrderRepository) Delete(ctx context.Context, id string) error {
+	tag, err := r.db.Exec(ctx, `DELETE FROM orders WHERE id = $1`, id)
 	if err != nil {
 		return err
 	}
 	if tag.RowsAffected() == 0 {
-		return errors.New("pedido não encontrado")
+		return fmt.Errorf("pedido não encontrado: %w", domain.ErrNotFound)
 	}
 	return nil
 }
