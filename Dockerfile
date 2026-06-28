@@ -14,18 +14,6 @@ COPY . .
 RUN swag init -g cmd/server/main.go
 RUN CGO_ENABLED=0 go build -o /out/server ./cmd/server
 
-# ── Target "runtime": EC2 / ECS / Fargate / App Runner ───────────────────────
-# docker build --target runtime -t rinoseller-api:runtime .
-FROM alpine:latest AS runtime
-
-RUN adduser -D -u 10001 app
-WORKDIR /app
-COPY --from=builder /out/server .
-USER app
-
-EXPOSE 8080
-CMD ["./server"]
-
 # ── Target "lambda": AWS Lambda (container image) ───────────────────────────
 # Mesma imagem/binário do target runtime, com o AWS Lambda Web Adapter
 # adicionado como extension — ele traduz eventos de invocação do Lambda em
@@ -39,6 +27,20 @@ ENV AWS_LWA_PORT=8080
 
 WORKDIR /app
 COPY --from=builder /out/server .
+
+EXPOSE 8080
+CMD ["./server"]
+
+# ── Target "runtime": EC2 / ECS / Fargate / App Runner / Railway ────────────
+# Estágio final por padrão (sem precisar de --target) — builders como o do
+# Railway usam o último estágio do Dockerfile quando nenhum target é informado.
+# docker build --target runtime -t rinoseller-api:runtime .
+FROM alpine:latest AS runtime
+
+RUN adduser -D -u 10001 app
+WORKDIR /app
+COPY --from=builder /out/server .
+USER app
 
 EXPOSE 8080
 CMD ["./server"]
