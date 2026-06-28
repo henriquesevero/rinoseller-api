@@ -399,6 +399,35 @@ const docTemplate = `{
                 }
             }
         },
+        "/c/{id}": {
+            "get": {
+                "description": "Gera uma página com metadados Open Graph (capa, título) para pré-visualização no WhatsApp e redireciona para o PDF no Google Drive.",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "Catálogos"
+                ],
+                "summary": "Página de compartilhamento de catálogo",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do catálogo",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "HTML",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/capital-contributions": {
             "get": {
                 "security": [

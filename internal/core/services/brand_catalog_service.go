@@ -32,6 +32,10 @@ func (s *BrandCatalogService) AddCatalog(ctx context.Context, c *domain.BrandCat
 	return s.repo.Save(ctx, c)
 }
 
+func (s *BrandCatalogService) GetCatalog(ctx context.Context, id string) (*domain.BrandCatalog, error) {
+	return s.repo.FindByID(ctx, id)
+}
+
 func (s *BrandCatalogService) DeleteCatalog(ctx context.Context, id string) error {
 	return s.repo.Delete(ctx, id)
 }

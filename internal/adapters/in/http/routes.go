@@ -36,6 +36,7 @@ func SetupRouter(h *Handler, authUC ports.AuthUseCase) *gin.Engine {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 	r.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	r.GET("/c/:id", h.ShareBrandCatalog)
 
 	api := r.Group("/api")
 

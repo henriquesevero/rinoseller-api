@@ -61,6 +61,18 @@ func (r *PostgresBrandCatalogRepository) FindAll(ctx context.Context, userID str
 	return result, nil
 }
 
+func (r *PostgresBrandCatalogRepository) FindByID(ctx context.Context, id string) (*domain.BrandCatalog, error) {
+	var c domain.BrandCatalog
+	err := r.db.QueryRow(ctx, `
+		SELECT id, COALESCE(user_id,''), brand_name, drive_url, created_at
+		FROM brand_catalogs WHERE id = $1
+	`, id).Scan(&c.ID, &c.UserID, &c.BrandName, &c.DriveURL, &c.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("catálogo não encontrado: %w", domain.ErrNotFound)
+	}
+	return &c, nil
+}
+
 func (r *PostgresBrandCatalogRepository) Delete(ctx context.Context, id string) error {
 	tag, err := r.db.Exec(ctx, `DELETE FROM brand_catalogs WHERE id = $1`, id)
 	if err != nil {

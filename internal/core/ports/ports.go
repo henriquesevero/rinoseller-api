@@ -63,6 +63,7 @@ type CapitalContributionRepository interface {
 type BrandCatalogRepository interface {
 	Save(ctx context.Context, c *domain.BrandCatalog) error
 	FindAll(ctx context.Context, userID string) ([]domain.BrandCatalog, error)
+	FindByID(ctx context.Context, id string) (*domain.BrandCatalog, error)
 	Delete(ctx context.Context, id string) error
 }
 
@@ -149,6 +150,7 @@ type CapitalContributionUseCase interface {
 type BrandCatalogUseCase interface {
 	ListCatalogs(ctx context.Context, userID string) ([]domain.BrandCatalog, error)
 	AddCatalog(ctx context.Context, c *domain.BrandCatalog) error
+	GetCatalog(ctx context.Context, id string) (*domain.BrandCatalog, error)
 	DeleteCatalog(ctx context.Context, id string) error
 }
 

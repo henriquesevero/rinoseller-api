@@ -847,6 +847,26 @@ paths:
       summary: Excluir catálogo de marca
       tags:
       - Catálogos de Marca
+  /c/{id}:
+    get:
+      description: Gera uma página com metadados Open Graph (capa, título) para pré-visualização
+        no WhatsApp e redireciona para o PDF no Google Drive.
+      parameters:
+      - description: ID do catálogo
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML
+          schema:
+            type: string
+      summary: Página de compartilhamento de catálogo
+      tags:
+      - Catálogos
   /capital-contributions:
     get:
       produces:
