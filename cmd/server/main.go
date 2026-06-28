@@ -25,6 +25,7 @@ import (
 	httphandler "rinoseller-api/internal/adapters/in/http"
 	"rinoseller-api/internal/adapters/out/database"
 	"rinoseller-api/internal/adapters/out/email"
+	"rinoseller-api/internal/adapters/out/payment"
 	"rinoseller-api/internal/adapters/out/repository"
 	"rinoseller-api/internal/core/services"
 )
@@ -59,6 +60,7 @@ func main() {
 		log.Fatal("RESEND_API_KEY, RESEND_FROM_EMAIL e FRONTEND_URL são obrigatórias")
 	}
 	emailSender := email.NewResendSender(resendAPIKey, resendFromEmail)
+	paymentGateway := payment.NewMockAsaasGateway()
 
 	authService, err := services.NewAuthService(userRepo, emailSender, frontendURL)
 	if err != nil {
@@ -72,6 +74,7 @@ func main() {
 	expenseService := services.NewExpenseService(expenseRepo)
 	capitalService := services.NewCapitalContributionService(capitalRepo)
 	brandCatalogService := services.NewBrandCatalogService(brandCatalogRepo)
+	subscriptionService := services.NewSubscriptionService(userRepo, paymentGateway)
 
 	if password, err := userService.EnsureDefaultAdmin(ctx); err != nil {
 		log.Printf("⚠ Aviso ao criar admin padrão: %v", err)
@@ -79,7 +82,7 @@ func main() {
 		log.Printf("✓ Admin padrão criado: admin@rinoseller.com / senha temporária: %s (troque-a após o primeiro login)", password)
 	}
 
-	handler := httphandler.NewHandler(authService, userService, productService, orderService, clientService, quoteService, expenseService, capitalService, brandCatalogService)
+	handler := httphandler.NewHandler(authService, userService, productService, orderService, clientService, quoteService, expenseService, capitalService, brandCatalogService, subscriptionService)
 	router := httphandler.SetupRouter(handler, authService)
 
 	srv := newServer(router)

@@ -12,6 +12,7 @@ type Handler struct {
 	expenseUC      ports.ExpenseUseCase
 	capitalUC      ports.CapitalContributionUseCase
 	brandCatalogUC ports.BrandCatalogUseCase
+	subscriptionUC ports.SubscriptionUseCase
 }
 
 func NewHandler(
@@ -24,8 +25,9 @@ func NewHandler(
 	expenseUC ports.ExpenseUseCase,
 	capitalUC ports.CapitalContributionUseCase,
 	brandCatalogUC ports.BrandCatalogUseCase,
+	subscriptionUC ports.SubscriptionUseCase,
 ) *Handler {
-	return &Handler{authUC: authUC, userUC: userUC, productUC: productUC, orderUC: orderUC, clientUC: clientUC, quoteUC: quoteUC, expenseUC: expenseUC, capitalUC: capitalUC, brandCatalogUC: brandCatalogUC}
+	return &Handler{authUC: authUC, userUC: userUC, productUC: productUC, orderUC: orderUC, clientUC: clientUC, quoteUC: quoteUC, expenseUC: expenseUC, capitalUC: capitalUC, brandCatalogUC: brandCatalogUC, subscriptionUC: subscriptionUC}
 }
 
 type messageResponse struct {

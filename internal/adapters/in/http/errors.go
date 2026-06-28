@@ -21,6 +21,10 @@ func respondError(c *gin.Context, err error) {
 		status, code = http.StatusConflict, "email_already_registered"
 	case errors.Is(err, domain.ErrInvalidCredentials):
 		status, code = http.StatusBadRequest, "invalid_credentials"
+	case errors.Is(err, domain.ErrSubscriptionRequired):
+		status, code = http.StatusPaymentRequired, "subscription_required"
+	case errors.Is(err, domain.ErrPaymentFailed):
+		status, code = http.StatusBadRequest, "payment_failed"
 	case errors.Is(err, domain.ErrNotFound):
 		status = http.StatusNotFound
 	case errors.Is(err, domain.ErrConflict):

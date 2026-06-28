@@ -46,67 +46,74 @@ func SetupRouter(h *Handler, authUC ports.AuthUseCase) *gin.Engine {
 	api.POST("/auth/login", h.Login)
 	api.POST("/auth/forgot-password", h.ForgotPassword)
 	api.POST("/auth/reset-password", h.ResetPassword)
+	api.POST("/subscriptions/checkout", h.CheckoutSubscription)
 
 	auth := api.Group("")
 	auth.Use(AuthMiddleware(authUC))
 	{
+		// Fora do gate de assinatura: precisa funcionar mesmo com o teste expirado,
+		// para a tela de cobrança conseguir mostrar o status e processar o pagamento.
 		auth.GET("/auth/me", h.GetMe)
 
-		admin := auth.Group("")
-		admin.Use(AdminOnly())
+		gated := auth.Group("")
+		gated.Use(SubscriptionRequired(authUC))
 		{
-			admin.GET("/users", h.ListUsers)
-			admin.POST("/users", h.CreateUser)
-			admin.PATCH("/users/:id", h.UpdateUser)
+			admin := gated.Group("")
+			admin.Use(AdminOnly())
+			{
+				admin.GET("/users", h.ListUsers)
+				admin.POST("/users", h.CreateUser)
+				admin.PATCH("/users/:id", h.UpdateUser)
+			}
+
+			gated.GET("/products", h.ListProducts)
+			gated.POST("/products", h.CreateProduct)
+			gated.PATCH("/products/:id/price", h.UpdatePrice)
+			gated.PATCH("/products/:id/stock", h.UpdateStock)
+			gated.DELETE("/products/:id", h.DeleteProduct)
+
+			gated.GET("/orders", h.ListOrders)
+			gated.POST("/orders", h.CreateOrder)
+			gated.DELETE("/orders/:id", h.DeleteOrder)
+
+			gated.GET("/clients", h.ListClients)
+			gated.POST("/clients", h.CreateClient)
+			gated.GET("/clients/:id", h.GetClient)
+			gated.PATCH("/clients/:id", h.UpdateClient)
+			gated.DELETE("/clients/:id", h.DeleteClient)
+			gated.GET("/clients/:id/orders", h.GetClientOrders)
+			gated.DELETE("/clients/:id/orders", h.ClearClientOrders)
+			gated.GET("/clients/:id/quotes", h.GetClientQuotes)
+			gated.DELETE("/clients/:id/quotes", h.ClearClientQuotes)
+			gated.GET("/payments", h.GetAllPayments)
+			gated.GET("/clients/:id/payment-history", h.GetClientPayments)
+			gated.DELETE("/clients/:id/payment-history", h.ClearClientPayments)
+			gated.POST("/clients/:id/payment", h.RegisterPayment)
+			gated.POST("/clients/:id/debt", h.AddDebt)
+
+			gated.GET("/quotes", h.ListQuotes)
+			gated.POST("/quotes", h.CreateQuote)
+			gated.GET("/quotes/:id", h.GetQuote)
+			gated.POST("/quotes/:id/approve", h.ApproveQuote)
+			gated.POST("/quotes/:id/deliver", h.DeliverQuote)
+			gated.POST("/quotes/:id/invoice", h.InvoiceQuote)
+			gated.POST("/quotes/:id/cancel", h.CancelQuote)
+			gated.POST("/quotes/:id/send-email", h.SendQuoteEmail)
+			gated.DELETE("/quotes/:id", h.DeleteQuote)
+
+			gated.GET("/expenses", h.ListExpenses)
+			gated.POST("/expenses", h.CreateExpense)
+			gated.POST("/expenses/:id/pay", h.PayExpense)
+			gated.DELETE("/expenses/:id", h.DeleteExpense)
+
+			gated.GET("/capital-contributions", h.ListCapitalContributions)
+			gated.POST("/capital-contributions", h.CreateCapitalContribution)
+			gated.DELETE("/capital-contributions/:id", h.DeleteCapitalContribution)
+
+			gated.GET("/brand-catalogs", h.ListBrandCatalogs)
+			gated.POST("/brand-catalogs", h.CreateBrandCatalog)
+			gated.DELETE("/brand-catalogs/:id", h.DeleteBrandCatalog)
 		}
-
-		auth.GET("/products", h.ListProducts)
-		auth.POST("/products", h.CreateProduct)
-		auth.PATCH("/products/:id/price", h.UpdatePrice)
-		auth.PATCH("/products/:id/stock", h.UpdateStock)
-		auth.DELETE("/products/:id", h.DeleteProduct)
-
-		auth.GET("/orders", h.ListOrders)
-		auth.POST("/orders", h.CreateOrder)
-		auth.DELETE("/orders/:id", h.DeleteOrder)
-
-		auth.GET("/clients", h.ListClients)
-		auth.POST("/clients", h.CreateClient)
-		auth.GET("/clients/:id", h.GetClient)
-		auth.PATCH("/clients/:id", h.UpdateClient)
-		auth.DELETE("/clients/:id", h.DeleteClient)
-		auth.GET("/clients/:id/orders", h.GetClientOrders)
-		auth.DELETE("/clients/:id/orders", h.ClearClientOrders)
-		auth.GET("/clients/:id/quotes", h.GetClientQuotes)
-		auth.DELETE("/clients/:id/quotes", h.ClearClientQuotes)
-		auth.GET("/payments", h.GetAllPayments)
-		auth.GET("/clients/:id/payment-history", h.GetClientPayments)
-		auth.DELETE("/clients/:id/payment-history", h.ClearClientPayments)
-		auth.POST("/clients/:id/payment", h.RegisterPayment)
-		auth.POST("/clients/:id/debt", h.AddDebt)
-
-		auth.GET("/quotes", h.ListQuotes)
-		auth.POST("/quotes", h.CreateQuote)
-		auth.GET("/quotes/:id", h.GetQuote)
-		auth.POST("/quotes/:id/approve", h.ApproveQuote)
-		auth.POST("/quotes/:id/deliver", h.DeliverQuote)
-		auth.POST("/quotes/:id/invoice", h.InvoiceQuote)
-		auth.POST("/quotes/:id/cancel", h.CancelQuote)
-		auth.POST("/quotes/:id/send-email", h.SendQuoteEmail)
-		auth.DELETE("/quotes/:id", h.DeleteQuote)
-
-		auth.GET("/expenses", h.ListExpenses)
-		auth.POST("/expenses", h.CreateExpense)
-		auth.POST("/expenses/:id/pay", h.PayExpense)
-		auth.DELETE("/expenses/:id", h.DeleteExpense)
-
-		auth.GET("/capital-contributions", h.ListCapitalContributions)
-		auth.POST("/capital-contributions", h.CreateCapitalContribution)
-		auth.DELETE("/capital-contributions/:id", h.DeleteCapitalContribution)
-
-		auth.GET("/brand-catalogs", h.ListBrandCatalogs)
-		auth.POST("/brand-catalogs", h.CreateBrandCatalog)
-		auth.DELETE("/brand-catalogs/:id", h.DeleteBrandCatalog)
 	}
 
 	return r

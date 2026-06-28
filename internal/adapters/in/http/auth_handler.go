@@ -17,6 +17,7 @@ type registerRequest struct {
 	Name     string `json:"name" binding:"required" example:"João Silva"`
 	Email    string `json:"email" binding:"required" example:"joao@email.com"`
 	Password string `json:"password" binding:"required" example:"123456"`
+	Plan     string `json:"plan" binding:"required" example:"trial"`
 }
 
 type forgotPasswordRequest struct {
@@ -61,7 +62,7 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	if _, err := h.authUC.Register(c.Request.Context(), body.Name, body.Email, body.Password); err != nil {
+	if _, err := h.authUC.Register(c.Request.Context(), body.Name, body.Email, body.Password, domain.Plan(body.Plan)); err != nil {
 		respondError(c, err)
 		return
 	}
@@ -186,5 +187,10 @@ func (h *Handler) Login(c *gin.Context) {
 // @Success     200 {object} domain.User
 // @Router      /auth/me [get]
 func (h *Handler) GetMe(c *gin.Context) {
-	c.JSON(http.StatusOK, ctxUser(c))
+	user, err := h.userUC.GetUser(c.Request.Context(), ctxUser(c).ID)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, user)
 }

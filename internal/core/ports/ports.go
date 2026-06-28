@@ -20,6 +20,7 @@ type UserRepository interface {
 	SetVerificationToken(ctx context.Context, id, token string) error
 	FindByVerificationToken(ctx context.Context, token string) (*domain.User, error)
 	MarkEmailVerified(ctx context.Context, id string) error
+	ActivateSubscription(ctx context.Context, id string, plan domain.Plan) error
 }
 
 type ProductRepository interface {
@@ -94,14 +95,38 @@ type EmailSender interface {
 	Send(ctx context.Context, toEmail, toName, subject, htmlBody string, attachments ...EmailAttachment) error
 }
 
+type CardDetails struct {
+	HolderName  string
+	Number      string
+	ExpiryMonth string
+	ExpiryYear  string
+	CVV         string
+}
+
+type CheckoutResult struct {
+	ID     string
+	Status string // "paid" | "failed"
+}
+
+// PaymentGateway abstrai o provedor de cobrança recorrente. Hoje só existe um adapter
+// simulado (mock); a implementação real do Asaas entra depois sem mudar essa interface.
+type PaymentGateway interface {
+	Charge(ctx context.Context, customerEmail, customerName string, plan domain.Plan, card CardDetails) (*CheckoutResult, error)
+}
+
 type AuthUseCase interface {
-	Register(ctx context.Context, name, email, password string) (*domain.User, error)
+	Register(ctx context.Context, name, email, password string, plan domain.Plan) (*domain.User, error)
 	VerifyEmail(ctx context.Context, token string) error
 	ResendVerificationEmail(ctx context.Context, email string) error
 	Login(ctx context.Context, email, password string) (token string, user *domain.User, err error)
 	ValidateToken(ctx context.Context, token string) (*domain.User, error)
 	ForgotPassword(ctx context.Context, email string) error
 	ResetPassword(ctx context.Context, token, newPassword string) error
+	CheckAccess(ctx context.Context, userID string) error
+}
+
+type SubscriptionUseCase interface {
+	Checkout(ctx context.Context, email string, plan domain.Plan, card CardDetails) error
 }
 
 type UserUseCase interface {

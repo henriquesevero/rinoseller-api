@@ -39,21 +39,31 @@ func NewAuthService(userRepo ports.UserRepository, emailSender ports.EmailSender
 	return &AuthService{userRepo: userRepo, emailSender: emailSender, jwtSecret: []byte(secret), frontendURL: frontendURL}, nil
 }
 
-func (s *AuthService) Register(ctx context.Context, name, email, password string) (*domain.User, error) {
+func (s *AuthService) Register(ctx context.Context, name, email, password string, plan domain.Plan) (*domain.User, error) {
+	if !plan.Selectable() {
+		return nil, fmt.Errorf("plano inválido: %w", domain.ErrValidation)
+	}
+
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
 	}
 
 	user := &domain.User{
-		ID:            uuid.New().String(),
-		Name:          name,
-		Email:         email,
-		PasswordHash:  string(hash),
-		Role:          domain.RoleSeller,
-		Active:        true,
-		EmailVerified: false,
-		CreatedAt:     time.Now(),
+		ID:                 uuid.New().String(),
+		Name:               name,
+		Email:              email,
+		PasswordHash:       string(hash),
+		Role:               domain.RoleSeller,
+		Active:             true,
+		EmailVerified:      false,
+		Plan:               plan,
+		SubscriptionActive: false,
+		CreatedAt:          time.Now(),
+	}
+	if plan == domain.PlanTrial {
+		trialEnds := time.Now().Add(domain.TrialDuration)
+		user.TrialEndsAt = &trialEnds
 	}
 	if err := s.userRepo.Save(ctx, user); err != nil {
 		return nil, domain.ErrEmailTaken
@@ -173,6 +183,17 @@ func (s *AuthService) ResetPassword(ctx context.Context, token, newPassword stri
 		return err
 	}
 	return s.userRepo.ClearResetToken(ctx, user.ID)
+}
+
+func (s *AuthService) CheckAccess(ctx context.Context, userID string) error {
+	user, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if !user.HasAccess() {
+		return domain.ErrSubscriptionRequired
+	}
+	return nil
 }
 
 func (s *AuthService) ValidateToken(ctx context.Context, tokenStr string) (*domain.User, error) {

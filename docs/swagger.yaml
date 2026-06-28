@@ -178,6 +178,18 @@ definitions:
     - PaymentTypeCustom
   domain.Phone:
     type: object
+  domain.Plan:
+    enum:
+    - trial
+    - base
+    - professional
+    - ai
+    type: string
+    x-enum-varnames:
+    - PlanTrial
+    - PlanBase
+    - PlanProfessional
+    - PlanAI
   domain.Product:
     properties:
       brand:
@@ -285,8 +297,14 @@ definitions:
         type: string
       name:
         type: string
+      plan:
+        $ref: '#/definitions/domain.Plan'
       role:
         $ref: '#/definitions/domain.UserRole'
+      subscription_active:
+        type: boolean
+      trial_ends_at:
+        type: string
     type: object
   domain.UserRole:
     enum:
@@ -309,6 +327,38 @@ definitions:
         type: string
       user:
         $ref: '#/definitions/domain.User'
+    type: object
+  httphandler.checkoutRequest:
+    properties:
+      cvv:
+        example: "123"
+        type: string
+      email:
+        example: joao@email.com
+        type: string
+      expiry_month:
+        example: "12"
+        type: string
+      expiry_year:
+        example: "2030"
+        type: string
+      holder_name:
+        example: João Silva
+        type: string
+      number:
+        example: "4444444444444444"
+        type: string
+      plan:
+        example: professional
+        type: string
+    required:
+    - cvv
+    - email
+    - expiry_month
+    - expiry_year
+    - holder_name
+    - number
+    - plan
     type: object
   httphandler.clientRequest:
     properties:
@@ -532,10 +582,14 @@ definitions:
       password:
         example: "123456"
         type: string
+      plan:
+        example: trial
+        type: string
     required:
     - email
     - name
     - password
+    - plan
     type: object
   httphandler.resendVerificationRequest:
     properties:
@@ -1823,6 +1877,34 @@ paths:
       summary: Enviar orçamento/pedido por e-mail
       tags:
       - Orçamentos
+  /subscriptions/checkout:
+    post:
+      consumes:
+      - application/json
+      description: Simula a cobrança via Asaas e ativa a assinatura do usuário. Não
+        requer login — usado tanto no fluxo de cadastro quanto a partir da tela de
+        cobrança após o período de teste.
+      parameters:
+      - description: Dados do plano e do cartão
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httphandler.checkoutRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphandler.messageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      summary: Assinar um plano (checkout simulado)
+      tags:
+      - Subscriptions
   /users:
     get:
       produces:

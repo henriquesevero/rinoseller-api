@@ -29,6 +29,22 @@ func AuthMiddleware(authUC ports.AuthUseCase) gin.HandlerFunc {
 	}
 }
 
+func SubscriptionRequired(authUC ports.AuthUseCase) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		user := ctxUser(c)
+		if user == nil {
+			c.Next()
+			return
+		}
+		if err := authUC.CheckAccess(c.Request.Context(), user.ID); err != nil {
+			respondError(c, err)
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
 func AdminOnly() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user := ctxUser(c)

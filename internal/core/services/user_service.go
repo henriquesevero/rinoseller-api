@@ -33,14 +33,15 @@ func (s *UserService) CreateUser(ctx context.Context, name, email, password stri
 	}
 
 	u := &domain.User{
-		ID:            uuid.New().String(),
-		Name:          name,
-		Email:         email,
-		PasswordHash:  string(hash),
-		Role:          role,
-		Active:        true,
-		EmailVerified: true,
-		CreatedAt:     time.Now(),
+		ID:                 uuid.New().String(),
+		Name:               name,
+		Email:              email,
+		PasswordHash:       string(hash),
+		Role:               role,
+		Active:             true,
+		EmailVerified:      true,
+		SubscriptionActive: true,
+		CreatedAt:          time.Now(),
 	}
 
 	if err := s.repo.Save(ctx, u); err != nil {

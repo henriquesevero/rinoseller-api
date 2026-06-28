@@ -20,15 +20,45 @@ func (r UserRole) Valid() bool {
 	return r == RoleAdmin || r == RoleSeller
 }
 
+type Plan string
+
+const (
+	PlanTrial        Plan = "trial"
+	PlanBase         Plan = "base"
+	PlanProfessional Plan = "professional"
+	PlanAI           Plan = "ai"
+)
+
+// Selectable são os planos que podem ser escolhidos no cadastro (o IA ainda não está disponível).
+func (p Plan) Selectable() bool {
+	return p == PlanTrial || p == PlanBase || p == PlanProfessional
+}
+
+const TrialDuration = 72 * time.Hour
+
 type User struct {
-	ID            string    `json:"id"`
-	Name          string    `json:"name"`
-	Email         string    `json:"email"`
-	PasswordHash  string    `json:"-"`
-	Role          UserRole  `json:"role"`
-	Active        bool      `json:"active"`
-	EmailVerified bool      `json:"email_verified"`
-	CreatedAt     time.Time `json:"created_at"`
+	ID                 string     `json:"id"`
+	Name               string     `json:"name"`
+	Email              string     `json:"email"`
+	PasswordHash       string     `json:"-"`
+	Role               UserRole   `json:"role"`
+	Active             bool       `json:"active"`
+	EmailVerified      bool       `json:"email_verified"`
+	Plan               Plan       `json:"plan"`
+	TrialEndsAt        *time.Time `json:"trial_ends_at,omitempty"`
+	SubscriptionActive bool       `json:"subscription_active"`
+	CreatedAt          time.Time  `json:"created_at"`
+}
+
+// HasAccess indica se o usuário pode usar o sistema: assinatura ativa, ou ainda dentro do período de teste.
+func (u *User) HasAccess() bool {
+	if u.SubscriptionActive {
+		return true
+	}
+	if u.Plan == PlanTrial && u.TrialEndsAt != nil {
+		return time.Now().Before(*u.TrialEndsAt)
+	}
+	return false
 }
 
 type KitItem struct {

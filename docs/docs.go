@@ -1973,6 +1973,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/subscriptions/checkout": {
+            "post": {
+                "description": "Simula a cobrança via Asaas e ativa a assinatura do usuário. Não requer login — usado tanto no fluxo de cadastro quanto a partir da tela de cobrança após o período de teste.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Subscriptions"
+                ],
+                "summary": "Assinar um plano (checkout simulado)",
+                "parameters": [
+                    {
+                        "description": "Dados do plano e do cartão",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/httphandler.checkoutRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphandler.messageResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httphandler.errorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/users": {
             "get": {
                 "security": [
@@ -2381,6 +2421,21 @@ const docTemplate = `{
         "domain.Phone": {
             "type": "object"
         },
+        "domain.Plan": {
+            "type": "string",
+            "enum": [
+                "trial",
+                "base",
+                "professional",
+                "ai"
+            ],
+            "x-enum-varnames": [
+                "PlanTrial",
+                "PlanBase",
+                "PlanProfessional",
+                "PlanAI"
+            ]
+        },
         "domain.Product": {
             "type": "object",
             "properties": {
@@ -2538,8 +2593,17 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "plan": {
+                    "$ref": "#/definitions/domain.Plan"
+                },
                 "role": {
                     "$ref": "#/definitions/domain.UserRole"
+                },
+                "subscription_active": {
+                    "type": "boolean"
+                },
+                "trial_ends_at": {
+                    "type": "string"
                 }
             }
         },
@@ -2572,6 +2636,48 @@ const docTemplate = `{
                 },
                 "user": {
                     "$ref": "#/definitions/domain.User"
+                }
+            }
+        },
+        "httphandler.checkoutRequest": {
+            "type": "object",
+            "required": [
+                "cvv",
+                "email",
+                "expiry_month",
+                "expiry_year",
+                "holder_name",
+                "number",
+                "plan"
+            ],
+            "properties": {
+                "cvv": {
+                    "type": "string",
+                    "example": "123"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "joao@email.com"
+                },
+                "expiry_month": {
+                    "type": "string",
+                    "example": "12"
+                },
+                "expiry_year": {
+                    "type": "string",
+                    "example": "2030"
+                },
+                "holder_name": {
+                    "type": "string",
+                    "example": "João Silva"
+                },
+                "number": {
+                    "type": "string",
+                    "example": "4444444444444444"
+                },
+                "plan": {
+                    "type": "string",
+                    "example": "professional"
                 }
             }
         },
@@ -2893,7 +2999,8 @@ const docTemplate = `{
             "required": [
                 "email",
                 "name",
-                "password"
+                "password",
+                "plan"
             ],
             "properties": {
                 "email": {
@@ -2907,6 +3014,10 @@ const docTemplate = `{
                 "password": {
                     "type": "string",
                     "example": "123456"
+                },
+                "plan": {
+                    "type": "string",
+                    "example": "trial"
                 }
             }
         },
