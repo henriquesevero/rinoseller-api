@@ -2277,6 +2277,9 @@ const docTemplate = `{
         "domain.Product": {
             "type": "object",
             "properties": {
+                "brand": {
+                    "type": "string"
+                },
                 "category": {
                     "type": "string"
                 },
@@ -2583,6 +2586,9 @@ const docTemplate = `{
                 "name"
             ],
             "properties": {
+                "brand": {
+                    "type": "string"
+                },
                 "category": {
                     "type": "string"
                 },

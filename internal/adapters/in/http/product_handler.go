@@ -17,6 +17,7 @@ type createProductRequest struct {
 	Code          string           `json:"code"`
 	Name          string           `json:"name" binding:"required"`
 	Category      string           `json:"category"`
+	Brand         string           `json:"brand"`
 	Price         float64          `json:"price"`
 	CostPrice     float64          `json:"cost_price"`
 	StockQuantity int              `json:"stock_quantity"`
@@ -42,6 +43,7 @@ func (req createProductRequest) toDomain(userID string) domain.Product {
 		Code:          req.Code,
 		Name:          req.Name,
 		Category:      req.Category,
+		Brand:         req.Brand,
 		Price:         domain.NewMoneyFromFloat(req.Price),
 		CostPrice:     domain.NewMoneyFromFloat(req.CostPrice),
 		StockQuantity: req.StockQuantity,

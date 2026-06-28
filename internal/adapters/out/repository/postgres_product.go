@@ -27,17 +27,18 @@ func (r *PostgresProductRepository) Save(ctx context.Context, p *domain.Product)
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	_, err = tx.Exec(ctx, `
-		INSERT INTO products (id, user_id, name, category, price, cost_price, stock_quantity, code, is_kit)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO products (id, user_id, name, category, brand, price, cost_price, stock_quantity, code, is_kit)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		ON CONFLICT (id) DO UPDATE SET
 			name           = EXCLUDED.name,
 			category       = EXCLUDED.category,
+			brand          = EXCLUDED.brand,
 			price          = EXCLUDED.price,
 			cost_price     = EXCLUDED.cost_price,
 			stock_quantity = EXCLUDED.stock_quantity,
 			code           = EXCLUDED.code,
 			is_kit         = EXCLUDED.is_kit
-	`, p.ID, nullStr(p.UserID), p.Name, p.Category, p.Price.Float64(), p.CostPrice.Float64(), p.StockQuantity, p.Code, p.IsKit)
+	`, p.ID, nullStr(p.UserID), p.Name, p.Category, p.Brand, p.Price.Float64(), p.CostPrice.Float64(), p.StockQuantity, p.Code, p.IsKit)
 	if err != nil {
 		return err
 	}
@@ -97,12 +98,12 @@ func (r *PostgresProductRepository) FindAll(ctx context.Context, userID string) 
 	)
 	if userID == "" {
 		rows, err = r.db.Query(ctx, `
-			SELECT id, COALESCE(user_id,''), name, category, price, cost_price, stock_quantity, code, is_kit
+			SELECT id, COALESCE(user_id,''), name, category, brand, price, cost_price, stock_quantity, code, is_kit
 			FROM products ORDER BY name
 		`)
 	} else {
 		rows, err = r.db.Query(ctx, `
-			SELECT id, COALESCE(user_id,''), name, category, price, cost_price, stock_quantity, code, is_kit
+			SELECT id, COALESCE(user_id,''), name, category, brand, price, cost_price, stock_quantity, code, is_kit
 			FROM products WHERE user_id = $1 ORDER BY name
 		`, userID)
 	}
@@ -115,7 +116,7 @@ func (r *PostgresProductRepository) FindAll(ctx context.Context, userID string) 
 	for rows.Next() {
 		var p domain.Product
 		var price, costPrice float64
-		if err := rows.Scan(&p.ID, &p.UserID, &p.Name, &p.Category, &price, &costPrice, &p.StockQuantity, &p.Code, &p.IsKit); err != nil {
+		if err := rows.Scan(&p.ID, &p.UserID, &p.Name, &p.Category, &p.Brand, &price, &costPrice, &p.StockQuantity, &p.Code, &p.IsKit); err != nil {
 			return nil, err
 		}
 		p.Price = domain.NewMoneyFromFloat(price)
@@ -146,9 +147,9 @@ func (r *PostgresProductRepository) FindByID(ctx context.Context, id string) (*d
 	var p domain.Product
 	var price, costPrice float64
 	err := r.db.QueryRow(ctx, `
-		SELECT id, COALESCE(user_id,''), name, category, price, cost_price, stock_quantity, code, is_kit
+		SELECT id, COALESCE(user_id,''), name, category, brand, price, cost_price, stock_quantity, code, is_kit
 		FROM products WHERE id = $1
-	`, id).Scan(&p.ID, &p.UserID, &p.Name, &p.Category, &price, &costPrice, &p.StockQuantity, &p.Code, &p.IsKit)
+	`, id).Scan(&p.ID, &p.UserID, &p.Name, &p.Category, &p.Brand, &price, &costPrice, &p.StockQuantity, &p.Code, &p.IsKit)
 	if err != nil {
 		return nil, fmt.Errorf("produto não encontrado: %w", domain.ErrNotFound)
 	}

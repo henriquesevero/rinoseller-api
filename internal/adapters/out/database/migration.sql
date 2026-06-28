@@ -196,6 +196,9 @@ CREATE INDEX IF NOT EXISTS idx_users_reset_token           ON users(reset_token)
 -- Índice para casar pedidos do catálogo com o cliente pelo telefone
 CREATE INDEX IF NOT EXISTS idx_orders_client_phone         ON orders(client_phone) WHERE client_phone <> '';
 
+-- Marca do produto (ex: Wella, L'Oréal) — usado para filtro na tela de produtos
+ALTER TABLE products ADD COLUMN IF NOT EXISTS brand TEXT NOT NULL DEFAULT '';
+
 CREATE TABLE IF NOT EXISTS brand_catalogs (
     id          TEXT PRIMARY KEY,
     user_id     TEXT REFERENCES users(id),

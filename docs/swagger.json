@@ -2271,6 +2271,9 @@
         "domain.Product": {
             "type": "object",
             "properties": {
+                "brand": {
+                    "type": "string"
+                },
                 "category": {
                     "type": "string"
                 },
@@ -2577,6 +2580,9 @@
                 "name"
             ],
             "properties": {
+                "brand": {
+                    "type": "string"
+                },
                 "category": {
                     "type": "string"
                 },
