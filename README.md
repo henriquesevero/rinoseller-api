@@ -116,6 +116,9 @@ cp .env.example .env
 | `JWT_SECRET` | sim | Secret para assinar os JWTs — a API **falha no boot** se não estiver definida (gerar com `openssl rand -hex 32`) |
 | `PORT` | não (default `8080`) | Porta HTTP |
 | `ALLOWED_ORIGINS` | não | Origens extras de CORS, separadas por vírgula (localhost já é permitido por padrão) |
+| `RESEND_API_KEY` | sim | API key do [Resend](https://resend.com/api-keys), usada para envio de e-mail (recuperação de senha) — a API **falha no boot** se não estiver definida |
+| `RESEND_FROM_EMAIL` | sim | Remetente verificado no Resend, ex: `RinoSeller <noreply@seudominio.com>` |
+| `FRONTEND_URL` | sim | URL pública do frontend, usada para montar o link de redefinição de senha enviado por e-mail |
 
 ## Rodando localmente
 
@@ -168,5 +171,8 @@ No painel do Railway, configurar as variáveis de ambiente do serviço:
 |---|---|
 | `DATABASE_URL` | Connection string do Postgres (pooler do Supabase) |
 | `JWT_SECRET` | Secret de produção dos JWTs |
+| `RESEND_API_KEY` | API key de produção do Resend |
+| `RESEND_FROM_EMAIL` | Remetente verificado, ex: `RinoSeller <noreply@seudominio.com>` |
+| `FRONTEND_URL` | URL de produção do frontend (Vercel) |
 
 Rodar a migração uma vez contra o banco de produção (`DATABASE_URL=... go run ./cmd/migrate`) antes do primeiro deploy.

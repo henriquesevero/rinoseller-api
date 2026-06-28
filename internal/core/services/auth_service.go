@@ -24,16 +24,18 @@ type Claims struct {
 }
 
 type AuthService struct {
-	userRepo  ports.UserRepository
-	jwtSecret []byte
+	userRepo    ports.UserRepository
+	emailSender ports.EmailSender
+	jwtSecret   []byte
+	frontendURL string
 }
 
-func NewAuthService(userRepo ports.UserRepository) (*AuthService, error) {
+func NewAuthService(userRepo ports.UserRepository, emailSender ports.EmailSender, frontendURL string) (*AuthService, error) {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
 		return nil, errors.New("JWT_SECRET não configurada")
 	}
-	return &AuthService{userRepo: userRepo, jwtSecret: []byte(secret)}, nil
+	return &AuthService{userRepo: userRepo, emailSender: emailSender, jwtSecret: []byte(secret), frontendURL: frontendURL}, nil
 }
 
 func (s *AuthService) Login(ctx context.Context, email, password string) (string, *domain.User, error) {
@@ -68,17 +70,29 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (string
 	return tokenStr, user, nil
 }
 
-func (s *AuthService) ForgotPassword(ctx context.Context, email string) (string, error) {
+func (s *AuthService) ForgotPassword(ctx context.Context, email string) error {
 	user, err := s.userRepo.FindByEmail(ctx, email)
 	if err != nil {
-		return "", nil
+		return nil
 	}
 	token := fmt.Sprintf("%06d", rand.Intn(1000000))
 	expires := time.Now().Add(30 * time.Minute)
 	if err := s.userRepo.SetResetToken(ctx, user.ID, token, expires); err != nil {
-		return "", err
+		return err
 	}
-	return token, nil
+
+	resetLink := fmt.Sprintf("%s/redefinir-senha?code=%s", s.frontendURL, token)
+	subject := "Recuperação de senha — RinoSeller"
+	body := fmt.Sprintf(`
+		<p>Olá, %s!</p>
+		<p>Recebemos uma solicitação para redefinir a senha da sua conta RinoSeller.</p>
+		<p>Use o código abaixo, ou clique no link para criar uma nova senha:</p>
+		<p style="font-size:24px;font-weight:bold;letter-spacing:4px;">%s</p>
+		<p><a href="%s">%s</a></p>
+		<p>O código expira em 30 minutos. Se você não solicitou isso, pode ignorar este e-mail.</p>
+	`, user.Name, token, resetLink, resetLink)
+
+	return s.emailSender.Send(ctx, user.Email, user.Name, subject, body)
 }
 
 func (s *AuthService) ResetPassword(ctx context.Context, token, newPassword string) error {

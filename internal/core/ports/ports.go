@@ -81,10 +81,14 @@ type QuoteRepository interface {
 	DeleteByClientID(ctx context.Context, clientID string) error
 }
 
+type EmailSender interface {
+	Send(ctx context.Context, toEmail, toName, subject, htmlBody string) error
+}
+
 type AuthUseCase interface {
 	Login(ctx context.Context, email, password string) (token string, user *domain.User, err error)
 	ValidateToken(ctx context.Context, token string) (*domain.User, error)
-	ForgotPassword(ctx context.Context, email string) (resetToken string, err error)
+	ForgotPassword(ctx context.Context, email string) error
 	ResetPassword(ctx context.Context, token, newPassword string) error
 }
 

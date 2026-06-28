@@ -73,7 +73,7 @@ func (h *Handler) Register(c *gin.Context) {
 // @Accept      json
 // @Produce     json
 // @Param       body body forgotPasswordRequest true "E-mail"
-// @Success     200 {object} map[string]string
+// @Success     200 {object} messageResponse
 // @Failure     400 {object} errorResponse
 // @Router      /auth/forgot-password [post]
 func (h *Handler) ForgotPassword(c *gin.Context) {
@@ -82,12 +82,11 @@ func (h *Handler) ForgotPassword(c *gin.Context) {
 		badRequest(c, "informe o e-mail")
 		return
 	}
-	token, err := h.authUC.ForgotPassword(c.Request.Context(), body.Email)
-	if err != nil {
+	if err := h.authUC.ForgotPassword(c.Request.Context(), body.Email); err != nil {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"token": token})
+	c.JSON(http.StatusOK, messageResponse{Message: "se o e-mail estiver cadastrado, enviaremos um link de recuperação"})
 }
 
 // @Summary     Redefinir senha

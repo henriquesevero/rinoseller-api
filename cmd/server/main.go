@@ -24,6 +24,7 @@ import (
 	_ "rinoseller-api/docs"
 	httphandler "rinoseller-api/internal/adapters/in/http"
 	"rinoseller-api/internal/adapters/out/database"
+	"rinoseller-api/internal/adapters/out/email"
 	"rinoseller-api/internal/adapters/out/repository"
 	"rinoseller-api/internal/core/services"
 )
@@ -51,7 +52,15 @@ func main() {
 	capitalRepo := repository.NewPostgresCapitalContributionRepository(db)
 	brandCatalogRepo := repository.NewPostgresBrandCatalogRepository(db)
 
-	authService, err := services.NewAuthService(userRepo)
+	resendAPIKey := os.Getenv("RESEND_API_KEY")
+	resendFromEmail := os.Getenv("RESEND_FROM_EMAIL")
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if resendAPIKey == "" || resendFromEmail == "" || frontendURL == "" {
+		log.Fatal("RESEND_API_KEY, RESEND_FROM_EMAIL e FRONTEND_URL são obrigatórias")
+	}
+	emailSender := email.NewResendSender(resendAPIKey, resendFromEmail)
+
+	authService, err := services.NewAuthService(userRepo, emailSender, frontendURL)
 	if err != nil {
 		log.Fatalf("Falha ao iniciar serviço de autenticação: %v", err)
 	}
