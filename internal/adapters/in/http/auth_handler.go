@@ -28,6 +28,10 @@ type resetPasswordRequest struct {
 	Password string `json:"password" example:"novaSenha123"`
 }
 
+type verifyEmailRequest struct {
+	Token string `json:"token" binding:"required" example:"abc123"`
+}
+
 type authResponse struct {
 	Token string      `json:"token" example:"eyJhbGciOiJIUzI1NiIs..."`
 	User  domain.User `json:"user"`
@@ -38,7 +42,7 @@ type authResponse struct {
 // @Accept      json
 // @Produce     json
 // @Param       body body registerRequest true "Dados de registro"
-// @Success     201 {object} authResponse
+// @Success     201 {object} messageResponse
 // @Failure     400 {object} errorResponse
 // @Failure     409 {object} errorResponse
 // @Router      /auth/register [post]
@@ -53,19 +57,32 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
-	user, err := h.userUC.CreateUser(ctx, body.Name, body.Email, body.Password, domain.RoleSeller)
-	if err != nil {
+	if _, err := h.authUC.Register(c.Request.Context(), body.Name, body.Email, body.Password); err != nil {
 		respondError(c, err)
 		return
 	}
+	c.JSON(http.StatusCreated, messageResponse{Message: "conta criada! verifique seu e-mail para ativá-la"})
+}
 
-	token, _, err := h.authUC.Login(ctx, body.Email, body.Password)
-	if err != nil {
-		c.JSON(http.StatusCreated, gin.H{"user": user})
+// @Summary     Confirmar e-mail
+// @Tags        Auth
+// @Accept      json
+// @Produce     json
+// @Param       body body verifyEmailRequest true "Token de verificação"
+// @Success     200 {object} messageResponse
+// @Failure     400 {object} errorResponse
+// @Router      /auth/verify-email [post]
+func (h *Handler) VerifyEmail(c *gin.Context) {
+	var body verifyEmailRequest
+	if err := c.ShouldBindJSON(&body); err != nil {
+		badRequest(c, "token é obrigatório")
 		return
 	}
-	c.JSON(http.StatusCreated, authResponse{Token: token, User: *user})
+	if err := h.authUC.VerifyEmail(c.Request.Context(), body.Token); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, messageResponse{Message: "e-mail confirmado com sucesso"})
 }
 
 // @Summary     Esqueci a senha

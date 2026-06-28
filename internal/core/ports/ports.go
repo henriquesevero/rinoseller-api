@@ -17,6 +17,9 @@ type UserRepository interface {
 	SetResetToken(ctx context.Context, id, token string, expires time.Time) error
 	FindByResetToken(ctx context.Context, token string) (*domain.User, error)
 	ClearResetToken(ctx context.Context, id string) error
+	SetVerificationToken(ctx context.Context, id, token string) error
+	FindByVerificationToken(ctx context.Context, token string) (*domain.User, error)
+	MarkEmailVerified(ctx context.Context, id string) error
 }
 
 type ProductRepository interface {
@@ -91,6 +94,8 @@ type EmailSender interface {
 }
 
 type AuthUseCase interface {
+	Register(ctx context.Context, name, email, password string) (*domain.User, error)
+	VerifyEmail(ctx context.Context, token string) error
 	Login(ctx context.Context, email, password string) (token string, user *domain.User, err error)
 	ValidateToken(ctx context.Context, token string) (*domain.User, error)
 	ForgotPassword(ctx context.Context, email string) error

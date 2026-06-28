@@ -40,6 +40,7 @@ func SetupRouter(h *Handler, authUC ports.AuthUseCase) *gin.Engine {
 	api := r.Group("/api")
 
 	api.POST("/auth/register", h.Register)
+	api.POST("/auth/verify-email", h.VerifyEmail)
 	api.POST("/auth/login", h.Login)
 	api.POST("/auth/forgot-password", h.ForgotPassword)
 	api.POST("/auth/reset-password", h.ResetPassword)

@@ -82,6 +82,10 @@ ALTER TABLE orders   ADD COLUMN IF NOT EXISTS user_id TEXT REFERENCES users(id);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_expires_at TIMESTAMPTZ;
 
+-- Verificação de e-mail no cadastro (contas existentes ficam verificadas por padrão)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token TEXT;
+
 -- CPF/CNPJ e endereço do cliente
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS cpf_cnpj TEXT NOT NULL DEFAULT '';
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS address  TEXT NOT NULL DEFAULT '';

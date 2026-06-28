@@ -20,9 +20,9 @@ func NewPostgresUserRepository(db *pgxpool.Pool) *PostgresUserRepository {
 
 func (r *PostgresUserRepository) Save(ctx context.Context, u *domain.User) error {
 	_, err := r.db.Exec(ctx, `
-		INSERT INTO users (id, name, email, password_hash, role, active, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-	`, u.ID, u.Name, u.Email, u.PasswordHash, string(u.Role), u.Active, u.CreatedAt)
+		INSERT INTO users (id, name, email, password_hash, role, active, email_verified, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	`, u.ID, u.Name, u.Email, u.PasswordHash, string(u.Role), u.Active, u.EmailVerified, u.CreatedAt)
 	return err
 }
 
@@ -30,9 +30,9 @@ func (r *PostgresUserRepository) FindByEmail(ctx context.Context, email string) 
 	var u domain.User
 	var role string
 	err := r.db.QueryRow(ctx, `
-		SELECT id, name, email, password_hash, role, active, created_at
+		SELECT id, name, email, password_hash, role, active, email_verified, created_at
 		FROM users WHERE email = $1
-	`, email).Scan(&u.ID, &u.Name, &u.Email, &u.PasswordHash, &role, &u.Active, &u.CreatedAt)
+	`, email).Scan(&u.ID, &u.Name, &u.Email, &u.PasswordHash, &role, &u.Active, &u.EmailVerified, &u.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("usuário não encontrado: %w", domain.ErrNotFound)
 	}
@@ -44,9 +44,9 @@ func (r *PostgresUserRepository) FindByID(ctx context.Context, id string) (*doma
 	var u domain.User
 	var role string
 	err := r.db.QueryRow(ctx, `
-		SELECT id, name, email, password_hash, role, active, created_at
+		SELECT id, name, email, password_hash, role, active, email_verified, created_at
 		FROM users WHERE id = $1
-	`, id).Scan(&u.ID, &u.Name, &u.Email, &u.PasswordHash, &role, &u.Active, &u.CreatedAt)
+	`, id).Scan(&u.ID, &u.Name, &u.Email, &u.PasswordHash, &role, &u.Active, &u.EmailVerified, &u.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("usuário não encontrado: %w", domain.ErrNotFound)
 	}
@@ -56,7 +56,7 @@ func (r *PostgresUserRepository) FindByID(ctx context.Context, id string) (*doma
 
 func (r *PostgresUserRepository) FindAll(ctx context.Context) ([]domain.User, error) {
 	rows, err := r.db.Query(ctx, `
-		SELECT id, name, email, role, active, created_at FROM users ORDER BY created_at ASC
+		SELECT id, name, email, role, active, email_verified, created_at FROM users ORDER BY created_at ASC
 	`)
 	if err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func (r *PostgresUserRepository) FindAll(ctx context.Context) ([]domain.User, er
 	for rows.Next() {
 		var u domain.User
 		var role string
-		if err := rows.Scan(&u.ID, &u.Name, &u.Email, &role, &u.Active, &u.CreatedAt); err != nil {
+		if err := rows.Scan(&u.ID, &u.Name, &u.Email, &role, &u.Active, &u.EmailVerified, &u.CreatedAt); err != nil {
 			return nil, err
 		}
 		u.Role = domain.UserRole(role)
@@ -116,5 +116,30 @@ func (r *PostgresUserRepository) FindByResetToken(ctx context.Context, token str
 func (r *PostgresUserRepository) ClearResetToken(ctx context.Context, id string) error {
 	_, err := r.db.Exec(ctx,
 		`UPDATE users SET reset_token=NULL, reset_expires_at=NULL WHERE id=$1`, id)
+	return err
+}
+
+func (r *PostgresUserRepository) SetVerificationToken(ctx context.Context, id, token string) error {
+	_, err := r.db.Exec(ctx, `UPDATE users SET verification_token=$1 WHERE id=$2`, token, id)
+	return err
+}
+
+func (r *PostgresUserRepository) FindByVerificationToken(ctx context.Context, token string) (*domain.User, error) {
+	var u domain.User
+	var role string
+	err := r.db.QueryRow(ctx, `
+		SELECT id, name, email, password_hash, role, active, email_verified, created_at
+		FROM users WHERE verification_token=$1
+	`, token).Scan(&u.ID, &u.Name, &u.Email, &u.PasswordHash, &role, &u.Active, &u.EmailVerified, &u.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("token de verificação inválido: %w", domain.ErrNotFound)
+	}
+	u.Role = domain.UserRole(role)
+	return &u, nil
+}
+
+func (r *PostgresUserRepository) MarkEmailVerified(ctx context.Context, id string) error {
+	_, err := r.db.Exec(ctx,
+		`UPDATE users SET email_verified=true, verification_token=NULL WHERE id=$1`, id)
 	return err
 }

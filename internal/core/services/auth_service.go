@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 
 	"rinoseller-api/internal/core/domain"
@@ -38,6 +39,54 @@ func NewAuthService(userRepo ports.UserRepository, emailSender ports.EmailSender
 	return &AuthService{userRepo: userRepo, emailSender: emailSender, jwtSecret: []byte(secret), frontendURL: frontendURL}, nil
 }
 
+func (s *AuthService) Register(ctx context.Context, name, email, password string) (*domain.User, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
+	user := &domain.User{
+		ID:            uuid.New().String(),
+		Name:          name,
+		Email:         email,
+		PasswordHash:  string(hash),
+		Role:          domain.RoleSeller,
+		Active:        true,
+		EmailVerified: false,
+		CreatedAt:     time.Now(),
+	}
+	if err := s.userRepo.Save(ctx, user); err != nil {
+		return nil, fmt.Errorf("e-mail já cadastrado: %w", domain.ErrConflict)
+	}
+
+	token := uuid.New().String()
+	if err := s.userRepo.SetVerificationToken(ctx, user.ID, token); err != nil {
+		return nil, err
+	}
+
+	verifyLink := fmt.Sprintf("%s/verificar-email?token=%s", s.frontendURL, token)
+	subject := "Confirme seu e-mail — RinoSeller"
+	body := fmt.Sprintf(`
+		<p>Olá, %s!</p>
+		<p>Falta só um passo para ativar sua conta RinoSeller: confirme seu e-mail clicando no link abaixo.</p>
+		<p><a href="%s">%s</a></p>
+		<p>Se você não criou essa conta, pode ignorar este e-mail.</p>
+	`, user.Name, verifyLink, verifyLink)
+	if err := s.emailSender.Send(ctx, user.Email, user.Name, subject, body); err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
+func (s *AuthService) VerifyEmail(ctx context.Context, token string) error {
+	user, err := s.userRepo.FindByVerificationToken(ctx, token)
+	if err != nil {
+		return err
+	}
+	return s.userRepo.MarkEmailVerified(ctx, user.ID)
+}
+
 func (s *AuthService) Login(ctx context.Context, email, password string) (string, *domain.User, error) {
 	user, err := s.userRepo.FindByEmail(ctx, email)
 	if err != nil {
@@ -48,6 +97,9 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (string
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
 		return "", nil, fmt.Errorf("credenciais inválidas: %w", domain.ErrValidation)
+	}
+	if !user.EmailVerified {
+		return "", nil, fmt.Errorf("confirme seu e-mail antes de fazer login: %w", domain.ErrForbidden)
 	}
 
 	claims := Claims{

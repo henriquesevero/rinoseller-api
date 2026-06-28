@@ -150,7 +150,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/httphandler.authResponse"
+                            "$ref": "#/definitions/httphandler.messageResponse"
                         }
                     },
                     "400": {
@@ -188,6 +188,45 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/httphandler.resetPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphandler.messageResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httphandler.errorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/verify-email": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Confirmar e-mail",
+                "parameters": [
+                    {
+                        "description": "Token de verificação",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/httphandler.verifyEmailRequest"
                         }
                     }
                 ],
@@ -2422,6 +2461,9 @@ const docTemplate = `{
                 "email": {
                     "type": "string"
                 },
+                "email_verified": {
+                    "type": "boolean"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -2857,6 +2899,18 @@ const docTemplate = `{
                 "name": {
                     "type": "string",
                     "example": "Maria Silva"
+                }
+            }
+        },
+        "httphandler.verifyEmailRequest": {
+            "type": "object",
+            "required": [
+                "token"
+            ],
+            "properties": {
+                "token": {
+                    "type": "string",
+                    "example": "abc123"
                 }
             }
         }

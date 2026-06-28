@@ -279,6 +279,8 @@ definitions:
         type: string
       email:
         type: string
+      email_verified:
+        type: boolean
       id:
         type: string
       name:
@@ -576,6 +578,14 @@ definitions:
         example: Maria Silva
         type: string
     type: object
+  httphandler.verifyEmailRequest:
+    properties:
+      token:
+        example: abc123
+        type: string
+    required:
+    - token
+    type: object
 host: localhost:8080
 info:
   contact: {}
@@ -669,7 +679,7 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/httphandler.authResponse'
+            $ref: '#/definitions/httphandler.messageResponse'
         "400":
           description: Bad Request
           schema:
@@ -704,6 +714,31 @@ paths:
           schema:
             $ref: '#/definitions/httphandler.errorResponse'
       summary: Redefinir senha
+      tags:
+      - Auth
+  /auth/verify-email:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Token de verificação
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httphandler.verifyEmailRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphandler.messageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      summary: Confirmar e-mail
       tags:
       - Auth
   /brand-catalogs:

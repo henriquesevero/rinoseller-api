@@ -21,13 +21,14 @@ func (r UserRole) Valid() bool {
 }
 
 type User struct {
-	ID           string    `json:"id"`
-	Name         string    `json:"name"`
-	Email        string    `json:"email"`
-	PasswordHash string    `json:"-"`
-	Role         UserRole  `json:"role"`
-	Active       bool      `json:"active"`
-	CreatedAt    time.Time `json:"created_at"`
+	ID            string    `json:"id"`
+	Name          string    `json:"name"`
+	Email         string    `json:"email"`
+	PasswordHash  string    `json:"-"`
+	Role          UserRole  `json:"role"`
+	Active        bool      `json:"active"`
+	EmailVerified bool      `json:"email_verified"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 type KitItem struct {
