@@ -121,6 +121,29 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Remove permanentemente a conta do usuário autenticado e todos os dados associados a ela (produtos, clientes, pedidos, orçamentos, etc).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Excluir minha conta",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphandler.messageResponse"
+                        }
+                    }
+                }
             }
         },
         "/auth/register": {

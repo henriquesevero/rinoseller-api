@@ -714,6 +714,21 @@ paths:
       tags:
       - Auth
   /auth/me:
+    delete:
+      description: Remove permanentemente a conta do usuário autenticado e todos os
+        dados associados a ela (produtos, clientes, pedidos, orçamentos, etc).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphandler.messageResponse'
+      security:
+      - BearerAuth: []
+      summary: Excluir minha conta
+      tags:
+      - Auth
     get:
       produces:
       - application/json
