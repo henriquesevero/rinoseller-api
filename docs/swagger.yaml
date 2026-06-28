@@ -451,6 +451,9 @@ definitions:
     type: object
   httphandler.errorResponse:
     properties:
+      code:
+        example: email_not_verified
+        type: string
       error:
         example: mensagem de erro
         type: string
@@ -533,6 +536,14 @@ definitions:
     - email
     - name
     - password
+    type: object
+  httphandler.resendVerificationRequest:
+    properties:
+      email:
+        example: joao@email.com
+        type: string
+    required:
+    - email
     type: object
   httphandler.resetPasswordRequest:
     properties:
@@ -689,6 +700,31 @@ paths:
           schema:
             $ref: '#/definitions/httphandler.errorResponse'
       summary: Registrar conta
+      tags:
+      - Auth
+  /auth/resend-verification:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: E-mail
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httphandler.resendVerificationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphandler.messageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      summary: Reenviar e-mail de confirmação
       tags:
       - Auth
   /auth/reset-password:

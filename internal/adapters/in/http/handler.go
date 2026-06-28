@@ -34,4 +34,5 @@ type messageResponse struct {
 
 type errorResponse struct {
 	Error string `json:"error" example:"mensagem de erro"`
+	Code  string `json:"code,omitempty" example:"email_not_verified"`
 }

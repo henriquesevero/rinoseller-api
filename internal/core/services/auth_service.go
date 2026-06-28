@@ -56,12 +56,20 @@ func (s *AuthService) Register(ctx context.Context, name, email, password string
 		CreatedAt:     time.Now(),
 	}
 	if err := s.userRepo.Save(ctx, user); err != nil {
-		return nil, fmt.Errorf("e-mail já cadastrado: %w", domain.ErrConflict)
+		return nil, domain.ErrEmailTaken
 	}
 
+	if err := s.sendVerificationEmail(ctx, user); err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
+func (s *AuthService) sendVerificationEmail(ctx context.Context, user *domain.User) error {
 	token := uuid.New().String()
 	if err := s.userRepo.SetVerificationToken(ctx, user.ID, token); err != nil {
-		return nil, err
+		return err
 	}
 
 	verifyLink := fmt.Sprintf("%s/verificar-email?token=%s", s.frontendURL, token)
@@ -72,11 +80,15 @@ func (s *AuthService) Register(ctx context.Context, name, email, password string
 		<p><a href="%s">%s</a></p>
 		<p>Se você não criou essa conta, pode ignorar este e-mail.</p>
 	`, user.Name, verifyLink, verifyLink)
-	if err := s.emailSender.Send(ctx, user.Email, user.Name, subject, body); err != nil {
-		return nil, err
-	}
+	return s.emailSender.Send(ctx, user.Email, user.Name, subject, body)
+}
 
-	return user, nil
+func (s *AuthService) ResendVerificationEmail(ctx context.Context, email string) error {
+	user, err := s.userRepo.FindByEmail(ctx, email)
+	if err != nil || user.EmailVerified {
+		return nil
+	}
+	return s.sendVerificationEmail(ctx, user)
 }
 
 func (s *AuthService) VerifyEmail(ctx context.Context, token string) error {
@@ -90,16 +102,16 @@ func (s *AuthService) VerifyEmail(ctx context.Context, token string) error {
 func (s *AuthService) Login(ctx context.Context, email, password string) (string, *domain.User, error) {
 	user, err := s.userRepo.FindByEmail(ctx, email)
 	if err != nil {
-		return "", nil, fmt.Errorf("credenciais inválidas: %w", domain.ErrValidation)
+		return "", nil, domain.ErrInvalidCredentials
 	}
 	if !user.Active {
-		return "", nil, fmt.Errorf("usuário inativo: %w", domain.ErrForbidden)
+		return "", nil, domain.ErrAccountInactive
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
-		return "", nil, fmt.Errorf("credenciais inválidas: %w", domain.ErrValidation)
+		return "", nil, domain.ErrInvalidCredentials
 	}
 	if !user.EmailVerified {
-		return "", nil, fmt.Errorf("confirme seu e-mail antes de fazer login: %w", domain.ErrForbidden)
+		return "", nil, domain.ErrEmailNotVerified
 	}
 
 	claims := Claims{

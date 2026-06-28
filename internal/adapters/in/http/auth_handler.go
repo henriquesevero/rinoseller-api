@@ -32,6 +32,10 @@ type verifyEmailRequest struct {
 	Token string `json:"token" binding:"required" example:"abc123"`
 }
 
+type resendVerificationRequest struct {
+	Email string `json:"email" binding:"required" example:"joao@email.com"`
+}
+
 type authResponse struct {
 	Token string      `json:"token" example:"eyJhbGciOiJIUzI1NiIs..."`
 	User  domain.User `json:"user"`
@@ -83,6 +87,27 @@ func (h *Handler) VerifyEmail(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, messageResponse{Message: "e-mail confirmado com sucesso"})
+}
+
+// @Summary     Reenviar e-mail de confirmação
+// @Tags        Auth
+// @Accept      json
+// @Produce     json
+// @Param       body body resendVerificationRequest true "E-mail"
+// @Success     200 {object} messageResponse
+// @Failure     400 {object} errorResponse
+// @Router      /auth/resend-verification [post]
+func (h *Handler) ResendVerificationEmail(c *gin.Context) {
+	var body resendVerificationRequest
+	if err := c.ShouldBindJSON(&body); err != nil || body.Email == "" {
+		badRequest(c, "informe o e-mail")
+		return
+	}
+	if err := h.authUC.ResendVerificationEmail(c.Request.Context(), body.Email); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, messageResponse{Message: "se o e-mail estiver cadastrado e pendente de confirmação, enviaremos um novo link"})
 }
 
 // @Summary     Esqueci a senha
