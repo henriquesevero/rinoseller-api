@@ -42,10 +42,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/httphandler.messageResponse"
                         }
                     },
                     "400": {
@@ -210,6 +207,120 @@ const docTemplate = `{
                 }
             }
         },
+        "/brand-catalogs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Catálogos de Marca"
+                ],
+                "summary": "Listar catálogos de marca",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.BrandCatalog"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httphandler.errorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Catálogos de Marca"
+                ],
+                "summary": "Cadastrar catálogo de marca",
+                "parameters": [
+                    {
+                        "description": "Dados do catálogo",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/httphandler.createBrandCatalogRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/domain.BrandCatalog"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httphandler.errorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/brand-catalogs/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Catálogos de Marca"
+                ],
+                "summary": "Excluir catálogo de marca",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do catálogo",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphandler.messageResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httphandler.errorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/capital-contributions": {
             "get": {
                 "security": [
@@ -265,7 +376,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.CapitalContribution"
+                            "$ref": "#/definitions/httphandler.createCapitalContributionRequest"
                         }
                     }
                 ],
@@ -379,7 +490,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.Client"
+                            "$ref": "#/definitions/httphandler.clientRequest"
                         }
                     }
                 ],
@@ -504,7 +615,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.Client"
+                            "$ref": "#/definitions/httphandler.clientRequest"
                         }
                     }
                 ],
@@ -924,7 +1035,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.Expense"
+                            "$ref": "#/definitions/httphandler.createExpenseRequest"
                         }
                     }
                 ],
@@ -1077,7 +1188,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.Order"
+                            "$ref": "#/definitions/httphandler.createOrderRequest"
                         }
                     }
                 ],
@@ -1224,7 +1335,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.Product"
+                            "$ref": "#/definitions/httphandler.createProductRequest"
                         }
                     }
                 ],
@@ -1452,7 +1563,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.Quote"
+                            "$ref": "#/definitions/httphandler.createQuoteRequest"
                         }
                     }
                 ],
@@ -1704,6 +1815,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/quotes/{id}/send-email": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orçamentos"
+                ],
+                "summary": "Enviar orçamento/pedido por e-mail",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do orçamento",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Tipo do documento e PDF em base64",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/httphandler.sendQuoteEmailRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphandler.messageResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httphandler.errorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/users": {
             "get": {
                 "security": [
@@ -1844,11 +2006,31 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "domain.BrandCatalog": {
+            "type": "object",
+            "properties": {
+                "brand_name": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "drive_url": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.CapitalContribution": {
             "type": "object",
             "properties": {
                 "amount": {
-                    "type": "number"
+                    "$ref": "#/definitions/domain.Money"
                 },
                 "created_at": {
                     "type": "string"
@@ -1857,15 +2039,13 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "hidden": {
-                    "description": "não aparece no histórico (ex: ajuste de zerar capital)",
                     "type": "boolean"
                 },
                 "id": {
                     "type": "string"
                 },
                 "type": {
-                    "description": "\"aporte\" ou \"retirada\"",
-                    "type": "string"
+                    "$ref": "#/definitions/domain.ContributionType"
                 },
                 "user_id": {
                     "type": "string"
@@ -1879,16 +2059,16 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "cpf_cnpj": {
-                    "type": "string"
+                    "$ref": "#/definitions/domain.CpfCnpj"
                 },
                 "created_at": {
                     "type": "string"
                 },
                 "debt": {
-                    "type": "number"
+                    "$ref": "#/definitions/domain.Money"
                 },
                 "debt_limit": {
-                    "type": "number"
+                    "$ref": "#/definitions/domain.Money"
                 },
                 "email": {
                     "type": "string"
@@ -1903,13 +2083,13 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "payment_cycle_amount": {
-                    "type": "number"
+                    "$ref": "#/definitions/domain.Money"
                 },
                 "payment_cycle_days": {
                     "type": "integer"
                 },
                 "phone": {
-                    "type": "string"
+                    "$ref": "#/definitions/domain.Phone"
                 },
                 "user_id": {
                     "type": "string"
@@ -1920,7 +2100,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "amount": {
-                    "type": "number"
+                    "$ref": "#/definitions/domain.Money"
                 },
                 "client_id": {
                     "type": "string"
@@ -1942,11 +2122,25 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.ContributionType": {
+            "type": "string",
+            "enum": [
+                "aporte",
+                "retirada"
+            ],
+            "x-enum-varnames": [
+                "ContributionAporte",
+                "ContributionRetirada"
+            ]
+        },
+        "domain.CpfCnpj": {
+            "type": "object"
+        },
         "domain.Expense": {
             "type": "object",
             "properties": {
                 "amount": {
-                    "type": "number"
+                    "$ref": "#/definitions/domain.Money"
                 },
                 "created_at": {
                     "type": "string"
@@ -1970,8 +2164,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "status": {
-                    "description": "\"Pendente\" | \"Pago\"",
-                    "type": "string"
+                    "$ref": "#/definitions/domain.ExpenseStatus"
                 },
                 "supplier": {
                     "type": "string"
@@ -1980,6 +2173,17 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "domain.ExpenseStatus": {
+            "type": "string",
+            "enum": [
+                "Pendente",
+                "Pago"
+            ],
+            "x-enum-varnames": [
+                "ExpenseStatusPending",
+                "ExpenseStatusPaid"
+            ]
         },
         "domain.KitItem": {
             "type": "object",
@@ -1994,6 +2198,9 @@ const docTemplate = `{
                     "type": "integer"
                 }
             }
+        },
+        "domain.Money": {
+            "type": "object"
         },
         "domain.Order": {
             "type": "object",
@@ -2017,10 +2224,10 @@ const docTemplate = `{
                     }
                 },
                 "status": {
-                    "type": "string"
+                    "$ref": "#/definitions/domain.OrderStatus"
                 },
                 "total": {
-                    "type": "number"
+                    "$ref": "#/definitions/domain.Money"
                 },
                 "user_id": {
                     "type": "string"
@@ -2031,7 +2238,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "price": {
-                    "type": "number"
+                    "$ref": "#/definitions/domain.Money"
                 },
                 "product_id": {
                     "type": "string"
@@ -2044,6 +2251,29 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.OrderStatus": {
+            "type": "string",
+            "enum": [
+                "Pronta-Entrega",
+                "Encomenda"
+            ],
+            "x-enum-varnames": [
+                "OrderStatusReady",
+                "OrderStatusBackorder"
+            ]
+        },
+        "domain.PaymentType": {
+            "type": "string",
+            "enum": [
+                "Personalizado"
+            ],
+            "x-enum-varnames": [
+                "PaymentTypeCustom"
+            ]
+        },
+        "domain.Phone": {
+            "type": "object"
+        },
         "domain.Product": {
             "type": "object",
             "properties": {
@@ -2054,7 +2284,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "cost_price": {
-                    "type": "number"
+                    "$ref": "#/definitions/domain.Money"
                 },
                 "id": {
                     "type": "string"
@@ -2072,7 +2302,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "price": {
-                    "type": "number"
+                    "$ref": "#/definitions/domain.Money"
                 },
                 "stock_quantity": {
                     "type": "integer"
@@ -2097,6 +2327,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "delivered_at": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -2116,13 +2349,13 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "payment_type": {
-                    "type": "string"
+                    "$ref": "#/definitions/domain.PaymentType"
                 },
                 "status": {
-                    "type": "string"
+                    "$ref": "#/definitions/domain.QuoteStatus"
                 },
                 "total": {
-                    "type": "number"
+                    "$ref": "#/definitions/domain.Money"
                 },
                 "user_id": {
                     "type": "string"
@@ -2148,12 +2381,31 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "subtotal": {
-                    "type": "number"
+                    "$ref": "#/definitions/domain.Money"
                 },
                 "unit_price": {
-                    "type": "number"
+                    "$ref": "#/definitions/domain.Money"
                 }
             }
+        },
+        "domain.QuoteStatus": {
+            "type": "string",
+            "enum": [
+                "Aguardando Aprovação",
+                "Aprovado",
+                "Faturado",
+                "Faturado Gradual",
+                "Entregue",
+                "Cancelado"
+            ],
+            "x-enum-varnames": [
+                "QuoteStatusAwaitingApproval",
+                "QuoteStatusApproved",
+                "QuoteStatusInvoiced",
+                "QuoteStatusInvoicedGradual",
+                "QuoteStatusDelivered",
+                "QuoteStatusCancelled"
+            ]
         },
         "domain.User": {
             "type": "object",
@@ -2174,10 +2426,20 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "role": {
-                    "description": "\"admin\" | \"seller\"",
-                    "type": "string"
+                    "$ref": "#/definitions/domain.UserRole"
                 }
             }
+        },
+        "domain.UserRole": {
+            "type": "string",
+            "enum": [
+                "admin",
+                "seller"
+            ],
+            "x-enum-varnames": [
+                "RoleAdmin",
+                "RoleSeller"
+            ]
         },
         "httphandler.addDebtRequest": {
             "type": "object",
@@ -2200,8 +2462,191 @@ const docTemplate = `{
                 }
             }
         },
+        "httphandler.clientRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "cpf_cnpj": {
+                    "type": "string"
+                },
+                "debt_limit": {
+                    "type": "number"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "payment_cycle_amount": {
+                    "type": "number"
+                },
+                "payment_cycle_days": {
+                    "type": "integer"
+                },
+                "phone": {
+                    "type": "string"
+                }
+            }
+        },
+        "httphandler.createBrandCatalogRequest": {
+            "type": "object",
+            "required": [
+                "brand_name",
+                "drive_url"
+            ],
+            "properties": {
+                "brand_name": {
+                    "type": "string"
+                },
+                "drive_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "httphandler.createCapitalContributionRequest": {
+            "type": "object",
+            "required": [
+                "amount"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "httphandler.createExpenseRequest": {
+            "type": "object",
+            "required": [
+                "amount",
+                "description"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "due_date": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "payment_method": {
+                    "type": "string"
+                },
+                "supplier": {
+                    "type": "string"
+                }
+            }
+        },
+        "httphandler.createOrderRequest": {
+            "type": "object",
+            "required": [
+                "items"
+            ],
+            "properties": {
+                "client_name": {
+                    "type": "string"
+                },
+                "client_phone": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/httphandler.orderItemRequest"
+                    }
+                }
+            }
+        },
+        "httphandler.createProductRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "code": {
+                    "type": "string"
+                },
+                "cost_price": {
+                    "type": "number"
+                },
+                "is_kit": {
+                    "type": "boolean"
+                },
+                "kit_items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/httphandler.kitItemRequest"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "stock_quantity": {
+                    "type": "integer"
+                }
+            }
+        },
+        "httphandler.createQuoteRequest": {
+            "type": "object",
+            "required": [
+                "client_id",
+                "items"
+            ],
+            "properties": {
+                "client_id": {
+                    "type": "string"
+                },
+                "installments": {
+                    "type": "integer"
+                },
+                "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/httphandler.quoteItemRequest"
+                    }
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "payment_type": {
+                    "type": "string"
+                }
+            }
+        },
         "httphandler.createUserRequest": {
             "type": "object",
+            "required": [
+                "email",
+                "name",
+                "password"
+            ],
             "properties": {
                 "email": {
                     "type": "string",
@@ -2239,8 +2684,23 @@ const docTemplate = `{
                 }
             }
         },
+        "httphandler.kitItemRequest": {
+            "type": "object",
+            "properties": {
+                "product_id": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                }
+            }
+        },
         "httphandler.loginRequest": {
             "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
             "properties": {
                 "email": {
                     "type": "string",
@@ -2258,6 +2718,36 @@ const docTemplate = `{
                 "message": {
                     "type": "string",
                     "example": "operação realizada com sucesso"
+                }
+            }
+        },
+        "httphandler.orderItemRequest": {
+            "type": "object",
+            "required": [
+                "product_id",
+                "quantity"
+            ],
+            "properties": {
+                "product_id": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                }
+            }
+        },
+        "httphandler.quoteItemRequest": {
+            "type": "object",
+            "required": [
+                "product_id",
+                "quantity"
+            ],
+            "properties": {
+                "product_id": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
                 }
             }
         },
@@ -2280,6 +2770,11 @@ const docTemplate = `{
         },
         "httphandler.registerRequest": {
             "type": "object",
+            "required": [
+                "email",
+                "name",
+                "password"
+            ],
             "properties": {
                 "email": {
                     "type": "string",
@@ -2305,6 +2800,22 @@ const docTemplate = `{
                 "token": {
                     "type": "string",
                     "example": "abc123"
+                }
+            }
+        },
+        "httphandler.sendQuoteEmailRequest": {
+            "type": "object",
+            "required": [
+                "kind",
+                "pdf_base64"
+            ],
+            "properties": {
+                "kind": {
+                    "type": "string",
+                    "example": "orcamento"
+                },
+                "pdf_base64": {
+                    "type": "string"
                 }
             }
         },

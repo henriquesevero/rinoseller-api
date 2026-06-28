@@ -81,8 +81,13 @@ type QuoteRepository interface {
 	DeleteByClientID(ctx context.Context, clientID string) error
 }
 
+type EmailAttachment struct {
+	Filename string
+	Content  []byte
+}
+
 type EmailSender interface {
-	Send(ctx context.Context, toEmail, toName, subject, htmlBody string) error
+	Send(ctx context.Context, toEmail, toName, subject, htmlBody string, attachments ...EmailAttachment) error
 }
 
 type AuthUseCase interface {
@@ -159,4 +164,5 @@ type QuoteUseCase interface {
 	GetClientQuotes(ctx context.Context, clientID string) ([]domain.Quote, error)
 	DeleteQuote(ctx context.Context, id string) error
 	ClearClientQuotes(ctx context.Context, clientID string) error
+	SendQuoteEmail(ctx context.Context, id, kind string, pdfBase64 string) error
 }

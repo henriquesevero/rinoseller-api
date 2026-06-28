@@ -179,3 +179,31 @@ func (h *Handler) DeleteQuote(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, messageResponse{Message: "orçamento excluído"})
 }
+
+type sendQuoteEmailRequest struct {
+	Kind      string `json:"kind" binding:"required" example:"orcamento"`
+	PDFBase64 string `json:"pdf_base64" binding:"required"`
+}
+
+// @Summary     Enviar orçamento/pedido por e-mail
+// @Tags        Orçamentos
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id path string true "ID do orçamento"
+// @Param       body body sendQuoteEmailRequest true "Tipo do documento e PDF em base64"
+// @Success     200 {object} messageResponse
+// @Failure     400 {object} errorResponse
+// @Router      /quotes/{id}/send-email [post]
+func (h *Handler) SendQuoteEmail(c *gin.Context) {
+	var body sendQuoteEmailRequest
+	if err := c.ShouldBindJSON(&body); err != nil {
+		badRequest(c, "tipo do documento e PDF são obrigatórios")
+		return
+	}
+	if err := h.quoteUC.SendQuoteEmail(c.Request.Context(), c.Param("id"), body.Kind, body.PDFBase64); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, messageResponse{Message: "e-mail enviado com sucesso"})
+}

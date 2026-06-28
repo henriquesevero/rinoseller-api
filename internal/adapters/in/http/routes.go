@@ -89,6 +89,7 @@ func SetupRouter(h *Handler, authUC ports.AuthUseCase) *gin.Engine {
 		auth.POST("/quotes/:id/deliver", h.DeliverQuote)
 		auth.POST("/quotes/:id/invoice", h.InvoiceQuote)
 		auth.POST("/quotes/:id/cancel", h.CancelQuote)
+		auth.POST("/quotes/:id/send-email", h.SendQuoteEmail)
 		auth.DELETE("/quotes/:id", h.DeleteQuote)
 
 		auth.GET("/expenses", h.ListExpenses)

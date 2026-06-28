@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"time"
 
@@ -15,13 +16,17 @@ type QuoteService struct {
 	quoteRepo   ports.QuoteRepository
 	productRepo ports.ProductRepository
 	clientRepo  ports.ClientRepository
+	userRepo    ports.UserRepository
+	emailSender ports.EmailSender
 }
 
-func NewQuoteService(quoteRepo ports.QuoteRepository, productRepo ports.ProductRepository, clientRepo ports.ClientRepository) *QuoteService {
+func NewQuoteService(quoteRepo ports.QuoteRepository, productRepo ports.ProductRepository, clientRepo ports.ClientRepository, userRepo ports.UserRepository, emailSender ports.EmailSender) *QuoteService {
 	return &QuoteService{
 		quoteRepo:   quoteRepo,
 		productRepo: productRepo,
 		clientRepo:  clientRepo,
+		userRepo:    userRepo,
+		emailSender: emailSender,
 	}
 }
 
@@ -154,4 +159,38 @@ func (s *QuoteService) DeleteQuote(ctx context.Context, id string) error {
 
 func (s *QuoteService) ClearClientQuotes(ctx context.Context, clientID string) error {
 	return s.quoteRepo.DeleteByClientID(ctx, clientID)
+}
+
+func (s *QuoteService) SendQuoteEmail(ctx context.Context, id, kind, pdfBase64 string) error {
+	q, err := s.quoteRepo.FindByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	client, err := s.clientRepo.FindByID(ctx, q.ClientID)
+	if err != nil {
+		return fmt.Errorf("cliente não encontrado: %w", domain.ErrValidation)
+	}
+	if client.Email == "" {
+		return fmt.Errorf("cliente não tem e-mail cadastrado: %w", domain.ErrValidation)
+	}
+
+	pdfBytes, err := base64.StdEncoding.DecodeString(pdfBase64)
+	if err != nil {
+		return fmt.Errorf("PDF inválido: %w", domain.ErrValidation)
+	}
+
+	issuerName := ""
+	if q.UserID != "" {
+		if issuer, err := s.userRepo.FindByID(ctx, q.UserID); err == nil {
+			issuerName = issuer.Name
+		}
+	}
+
+	docCode := quoteDocumentCode(q.ID, kind)
+	subject, html := buildQuoteEmailContent(client, kind, docCode, issuerName)
+
+	return s.emailSender.Send(ctx, client.Email, client.Name, subject, html, ports.EmailAttachment{
+		Filename: docCode + ".pdf",
+		Content:  pdfBytes,
+	})
 }
