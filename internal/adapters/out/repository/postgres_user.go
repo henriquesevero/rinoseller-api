@@ -140,6 +140,6 @@ func (r *PostgresUserRepository) FindByVerificationToken(ctx context.Context, to
 
 func (r *PostgresUserRepository) MarkEmailVerified(ctx context.Context, id string) error {
 	_, err := r.db.Exec(ctx,
-		`UPDATE users SET email_verified=true, verification_token=NULL WHERE id=$1`, id)
+		`UPDATE users SET email_verified=true WHERE id=$1`, id)
 	return err
 }
