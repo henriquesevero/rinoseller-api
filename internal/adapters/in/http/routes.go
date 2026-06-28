@@ -54,6 +54,7 @@ func SetupRouter(h *Handler, authUC ports.AuthUseCase) *gin.Engine {
 		// Fora do gate de assinatura: precisa funcionar mesmo com o teste expirado,
 		// para a tela de cobrança conseguir mostrar o status e processar o pagamento.
 		auth.GET("/auth/me", h.GetMe)
+		auth.DELETE("/auth/me", h.DeleteMe)
 
 		gated := auth.Group("")
 		gated.Use(SubscriptionRequired(authUC))

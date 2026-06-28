@@ -102,6 +102,16 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS code TEXT NOT NULL DEFAULT '';
 ALTER TABLE quotes ADD COLUMN IF NOT EXISTS payment_type TEXT NOT NULL DEFAULT '';
 ALTER TABLE quotes ADD COLUMN IF NOT EXISTS installments INTEGER NOT NULL DEFAULT 1;
 
+-- Exclusão de conta: ao remover um usuário, todos os dados associados a ele são removidos em cascata.
+ALTER TABLE brand_catalogs        DROP CONSTRAINT IF EXISTS brand_catalogs_user_id_fkey,        ADD CONSTRAINT brand_catalogs_user_id_fkey        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+ALTER TABLE capital_contributions DROP CONSTRAINT IF EXISTS capital_contributions_user_id_fkey, ADD CONSTRAINT capital_contributions_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+ALTER TABLE client_payments        DROP CONSTRAINT IF EXISTS client_payments_user_id_fkey,       ADD CONSTRAINT client_payments_user_id_fkey       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+ALTER TABLE clients                DROP CONSTRAINT IF EXISTS clients_user_id_fkey,                ADD CONSTRAINT clients_user_id_fkey                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+ALTER TABLE expenses               DROP CONSTRAINT IF EXISTS expenses_user_id_fkey,               ADD CONSTRAINT expenses_user_id_fkey               FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+ALTER TABLE orders                 DROP CONSTRAINT IF EXISTS orders_user_id_fkey,                 ADD CONSTRAINT orders_user_id_fkey                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+ALTER TABLE products               DROP CONSTRAINT IF EXISTS products_user_id_fkey,               ADD CONSTRAINT products_user_id_fkey               FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+ALTER TABLE quotes                 DROP CONSTRAINT IF EXISTS quotes_user_id_fkey,                 ADD CONSTRAINT quotes_user_id_fkey                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
 -- Ciclo de recebimento por cliente
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS payment_cycle_days   INTEGER      NOT NULL DEFAULT 0;
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS payment_cycle_amount NUMERIC(10,2) NOT NULL DEFAULT 0;

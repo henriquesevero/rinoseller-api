@@ -73,6 +73,10 @@ func (s *UserService) UpdateUser(ctx context.Context, id, name, email string, ac
 	return u, nil
 }
 
+func (s *UserService) DeleteUser(ctx context.Context, id string) error {
+	return s.repo.Delete(ctx, id)
+}
+
 func (s *UserService) EnsureDefaultAdmin(ctx context.Context) (string, error) {
 	has, err := s.repo.HasAnyAdmin(ctx)
 	if err != nil {

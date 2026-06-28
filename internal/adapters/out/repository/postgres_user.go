@@ -158,3 +158,14 @@ func (r *PostgresUserRepository) ActivateSubscription(ctx context.Context, id st
 	}
 	return nil
 }
+
+func (r *PostgresUserRepository) Delete(ctx context.Context, id string) error {
+	tag, err := r.db.Exec(ctx, `DELETE FROM users WHERE id=$1`, id)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("usuário não encontrado: %w", domain.ErrNotFound)
+	}
+	return nil
+}

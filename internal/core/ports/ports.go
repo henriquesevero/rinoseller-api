@@ -21,6 +21,7 @@ type UserRepository interface {
 	FindByVerificationToken(ctx context.Context, token string) (*domain.User, error)
 	MarkEmailVerified(ctx context.Context, id string) error
 	ActivateSubscription(ctx context.Context, id string, plan domain.Plan) error
+	Delete(ctx context.Context, id string) error
 }
 
 type ProductRepository interface {
@@ -135,6 +136,7 @@ type UserUseCase interface {
 	GetUser(ctx context.Context, id string) (*domain.User, error)
 	UpdateUser(ctx context.Context, id, name, email string, active bool) (*domain.User, error)
 	EnsureDefaultAdmin(ctx context.Context) (generatedPassword string, err error)
+	DeleteUser(ctx context.Context, id string) error
 }
 
 type ProductUseCase interface {

@@ -194,3 +194,18 @@ func (h *Handler) GetMe(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, user)
 }
+
+// @Summary     Excluir minha conta
+// @Description Remove permanentemente a conta do usuário autenticado e todos os dados associados a ela (produtos, clientes, pedidos, orçamentos, etc).
+// @Tags        Auth
+// @Produce     json
+// @Security    BearerAuth
+// @Success     200 {object} messageResponse
+// @Router      /auth/me [delete]
+func (h *Handler) DeleteMe(c *gin.Context) {
+	if err := h.userUC.DeleteUser(c.Request.Context(), ctxUser(c).ID); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, messageResponse{Message: "conta excluída com sucesso"})
+}
