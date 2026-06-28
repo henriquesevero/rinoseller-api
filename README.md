@@ -8,8 +8,7 @@ API do sistema RinoSeller — gestão de vendas, clientes, produtos, orçamentos
 - **PostgreSQL** via [pgx](https://github.com/jackc/pgx) (hoje hospedado no Supabase)
 - **JWT** (golang-jwt) para autenticação, bcrypt para senhas
 - **Swagger/OpenAPI** gerado via [swaggo](https://github.com/swaggo/swag)
-- **Docker** multi-stage (mesma imagem roda em AWS Lambda, ECS, EC2 ou App Runner)
-- **Terraform** para a infraestrutura AWS (`infra/terraform/`)
+- **Docker** para build e deploy
 
 ## Arquitetura
 
@@ -60,24 +59,6 @@ Hexagonal: o domínio não conhece HTTP nem banco de dados. Os adapters de entra
 
 A composição (wiring manual de todas as dependências) acontece em `cmd/server/main.go` — não há container de DI nem reflection, é só código explícito.
 
-### Deploy: um binário, múltiplos ambientes
-
-```
-                    ┌─────────────────────┐
-                    │   Dockerfile único    │
-                    │  (stage "builder")    │
-                    └──────────┬───────────┘
-                ┌──────────────┴──────────────┐
-                ▼                              ▼
-   ┌─────────────────────────┐    ┌─────────────────────────────┐
-   │  target "runtime"        │    │  target "lambda"              │
-   │  binário Go puro          │    │  binário Go + AWS Lambda      │
-   │  (EC2 / ECS / App Runner) │    │  Web Adapter (extension)      │
-   └─────────────────────────┘    └─────────────────────────────┘
-```
-
-O binário Go é **idêntico** nos dois casos — nenhum código depende do SDK ou dos eventos do Lambda. O [AWS Lambda Web Adapter](https://github.com/awslabs/aws-lambda-web-adapter) traduz invocações do Lambda em requisições HTTP normais contra o mesmo servidor Gin. Trocar de Lambda para ECS/EC2 no futuro é só usar o outro target do Dockerfile — zero mudança de código.
-
 ### Domínio
 
 | Entidade | Responsabilidade |
@@ -109,8 +90,8 @@ internal/
     out/database/   # conexão pgx, schema SQL
     out/repository/ # implementação Postgres dos ports de repositório
 docs/             # Swagger gerado (swag init) — não editar manualmente
-infra/terraform/  # infraestrutura AWS (ECR, Lambda, IAM, logs)
-Dockerfile        # multi-stage: targets "runtime" e "lambda"
+Dockerfile
+railway.toml      # config de build/healthcheck do Railway
 ```
 
 ## Setup
@@ -160,17 +141,12 @@ A API sobe em `http://localhost:8080`. No primeiro boot, se não existir nenhum 
 ## Rodando via Docker
 
 ```bash
-# build (target "runtime", o mesmo usado em EC2/ECS/App Runner)
-docker build --target runtime -t rinoseller-api:runtime .
+docker build -t rinoseller-api .
 
-# build do target Lambda (com o AWS Lambda Web Adapter embutido)
-docker build --target lambda -t rinoseller-api:lambda .
-
-# rodar o target runtime localmente
 docker run --rm -p 8080:8080 \
   -e DATABASE_URL="postgres://..." \
   -e JWT_SECRET="..." \
-  rinoseller-api:runtime
+  rinoseller-api
 ```
 
 ## Checks de qualidade
@@ -182,28 +158,15 @@ gofmt -l .
 golangci-lint run ./...   # brew install golangci-lint
 ```
 
-## Deploy na AWS
+## Deploy (Railway)
 
-Infraestrutura como código em `infra/terraform/` (ECR, Lambda, API Gateway HTTP API, IAM, CloudWatch Logs, role OIDC para CI). Passo a passo manual completo — criação do bucket de state, build/push da imagem, `terraform apply` — está em [`infra/terraform/README.md`](infra/terraform/README.md).
+O Railway detecta o `Dockerfile` automaticamente. `railway.toml` define o builder e o healthcheck (`/health`).
 
-A API é exposta via **API Gateway HTTP API** (não Function URL) — o Lambda Web Adapter trata os dois formatos de evento da mesma forma, então isso não exige nenhuma mudança no código Go.
+No painel do Railway, configurar as variáveis de ambiente do serviço:
 
-O banco de dados continua no Supabase (pooler em modo *transaction*, porta 6543 — necessário porque Lambda abre uma conexão por invocação concorrente, e o pooler evita esgotar o limite de conexões do Postgres).
+| Variável | Valor |
+|---|---|
+| `DATABASE_URL` | Connection string do Postgres (pooler do Supabase) |
+| `JWT_SECRET` | Secret de produção dos JWTs |
 
-### CI/CD — GitHub Actions
-
-- `.github/workflows/ci.yml`: roda em todo PR contra `main` — build, vet, gofmt, golangci-lint e `terraform validate`. Não precisa de credenciais AWS.
-- `.github/workflows/deploy.yml`: roda em todo push em `main` (ou manualmente) — build + push da imagem no ECR, `terraform apply`, e roda a migração do banco. Autentica na AWS via **OIDC** (`aws_iam_openid_connect_provider` + `aws_iam_role.github_actions_deploy` em `infra/terraform/github_oidc.tf`) — nenhuma access key fica armazenada como secret do GitHub, o workflow assume a role via token federado, restrito a `repo:<owner>/<repo>:ref:refs/heads/main`.
-
-Secrets necessários no repositório GitHub (**Settings → Secrets and variables → Actions**):
-
-| Nome | Tipo | Valor |
-|---|---|---|
-| `DATABASE_URL` | Secret | Connection string do Postgres (pooler) |
-| `JWT_SECRET` | Secret | Secret de produção dos JWTs |
-| `AWS_ROLE_ARN` | Variable | ARN da role criada em `github_oidc.tf` (saída `github_actions_role_arn` do Terraform) |
-| `ALLOWED_ORIGINS` | Variable | Domínio do frontend, se aplicável |
-
-### Status atual do deploy
-
-A função Lambda já está criada e funcionando (validado invocando diretamente via `aws lambda invoke`). A exposição pública (API Gateway) e a criação da role OIDC do GitHub Actions estão temporariamente bloqueadas por uma **restrição padrão de conta nova da AWS** (anti-fraude, bloqueia criação de endpoints públicos em contas recém-criadas) — não é um problema de código, Terraform ou IAM policy. Resolve-se abrindo um chamado gratuito em **Support Center → Account and Billing**. Depois de liberado pela AWS, basta rodar `terraform apply` de novo em `infra/terraform/` — nenhuma mudança adicional é necessária.
+Rodar a migração uma vez contra o banco de produção (`DATABASE_URL=... go run ./cmd/migrate`) antes do primeiro deploy.
