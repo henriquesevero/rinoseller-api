@@ -130,6 +130,11 @@ type SubscriptionUseCase interface {
 	Checkout(ctx context.Context, email string, plan domain.Plan, card CardDetails) error
 }
 
+// DocumentEmailUseCase envia um PDF qualquer (ex: tabela de preços) por e-mail para um cliente.
+type DocumentEmailUseCase interface {
+	SendDocumentEmail(ctx context.Context, clientID, subject, message, filename, pdfBase64 string) error
+}
+
 type UserUseCase interface {
 	CreateUser(ctx context.Context, name, email, password string, role domain.UserRole) (*domain.User, error)
 	ListUsers(ctx context.Context) ([]domain.User, error)

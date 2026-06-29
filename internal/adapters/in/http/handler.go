@@ -3,16 +3,17 @@ package httphandler
 import "rinoseller-api/internal/core/ports"
 
 type Handler struct {
-	authUC         ports.AuthUseCase
-	userUC         ports.UserUseCase
-	productUC      ports.ProductUseCase
-	orderUC        ports.OrderUseCase
-	clientUC       ports.ClientUseCase
-	quoteUC        ports.QuoteUseCase
-	expenseUC      ports.ExpenseUseCase
-	capitalUC      ports.CapitalContributionUseCase
-	brandCatalogUC ports.BrandCatalogUseCase
-	subscriptionUC ports.SubscriptionUseCase
+	authUC          ports.AuthUseCase
+	userUC          ports.UserUseCase
+	productUC       ports.ProductUseCase
+	orderUC         ports.OrderUseCase
+	clientUC        ports.ClientUseCase
+	quoteUC         ports.QuoteUseCase
+	expenseUC       ports.ExpenseUseCase
+	capitalUC       ports.CapitalContributionUseCase
+	brandCatalogUC  ports.BrandCatalogUseCase
+	subscriptionUC  ports.SubscriptionUseCase
+	documentEmailUC ports.DocumentEmailUseCase
 }
 
 func NewHandler(
@@ -26,8 +27,9 @@ func NewHandler(
 	capitalUC ports.CapitalContributionUseCase,
 	brandCatalogUC ports.BrandCatalogUseCase,
 	subscriptionUC ports.SubscriptionUseCase,
+	documentEmailUC ports.DocumentEmailUseCase,
 ) *Handler {
-	return &Handler{authUC: authUC, userUC: userUC, productUC: productUC, orderUC: orderUC, clientUC: clientUC, quoteUC: quoteUC, expenseUC: expenseUC, capitalUC: capitalUC, brandCatalogUC: brandCatalogUC, subscriptionUC: subscriptionUC}
+	return &Handler{authUC: authUC, userUC: userUC, productUC: productUC, orderUC: orderUC, clientUC: clientUC, quoteUC: quoteUC, expenseUC: expenseUC, capitalUC: capitalUC, brandCatalogUC: brandCatalogUC, subscriptionUC: subscriptionUC, documentEmailUC: documentEmailUC}
 }
 
 type messageResponse struct {

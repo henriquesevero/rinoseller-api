@@ -1110,6 +1110,53 @@ const docTemplate = `{
                 }
             }
         },
+        "/clients/{id}/send-document-email": {
+            "post": {
+                "description": "Envia um PDF qualquer (ex: tabela de preços) por e-mail, em anexo, para o cliente informado.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clients"
+                ],
+                "summary": "Enviar documento por e-mail para um cliente",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do cliente",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Assunto, mensagem e PDF em base64",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/httphandler.sendDocumentEmailRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphandler.messageResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httphandler.errorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/expenses": {
             "get": {
                 "security": [
@@ -3070,6 +3117,32 @@ const docTemplate = `{
                 "token": {
                     "type": "string",
                     "example": "abc123"
+                }
+            }
+        },
+        "httphandler.sendDocumentEmailRequest": {
+            "type": "object",
+            "required": [
+                "filename",
+                "message",
+                "pdf_base64",
+                "subject"
+            ],
+            "properties": {
+                "filename": {
+                    "type": "string",
+                    "example": "tabela-elements.pdf"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Segue em anexo nossa tabela de preços atualizada."
+                },
+                "pdf_base64": {
+                    "type": "string"
+                },
+                "subject": {
+                    "type": "string",
+                    "example": "Tabela de Preços — Elements"
                 }
             }
         },

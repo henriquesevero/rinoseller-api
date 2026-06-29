@@ -79,6 +79,7 @@ func main() {
 	capitalService := services.NewCapitalContributionService(capitalRepo)
 	brandCatalogService := services.NewBrandCatalogService(brandCatalogRepo)
 	subscriptionService := services.NewSubscriptionService(userRepo, paymentGateway)
+	documentEmailService := services.NewDocumentEmailService(clientRepo, emailSender)
 
 	if password, err := userService.EnsureDefaultAdmin(ctx); err != nil {
 		log.Printf("⚠ Aviso ao criar admin padrão: %v", err)
@@ -86,7 +87,7 @@ func main() {
 		log.Printf("✓ Admin padrão criado: admin@rinoseller.com / senha temporária: %s (troque-a após o primeiro login)", password)
 	}
 
-	handler := httphandler.NewHandler(authService, userService, productService, orderService, clientService, quoteService, expenseService, capitalService, brandCatalogService, subscriptionService)
+	handler := httphandler.NewHandler(authService, userService, productService, orderService, clientService, quoteService, expenseService, capitalService, brandCatalogService, subscriptionService, documentEmailService)
 	router := httphandler.SetupRouter(handler, authService)
 
 	srv := newServer(router)

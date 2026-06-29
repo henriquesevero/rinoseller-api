@@ -611,6 +611,25 @@ definitions:
         example: abc123
         type: string
     type: object
+  httphandler.sendDocumentEmailRequest:
+    properties:
+      filename:
+        example: tabela-elements.pdf
+        type: string
+      message:
+        example: Segue em anexo nossa tabela de preços atualizada.
+        type: string
+      pdf_base64:
+        type: string
+      subject:
+        example: Tabela de Preços — Elements
+        type: string
+    required:
+    - filename
+    - message
+    - pdf_base64
+    - subject
+    type: object
   httphandler.sendQuoteEmailRequest:
     properties:
       kind:
@@ -1348,6 +1367,38 @@ paths:
       summary: Orçamentos do cliente
       tags:
       - Clientes
+  /clients/{id}/send-document-email:
+    post:
+      consumes:
+      - application/json
+      description: 'Envia um PDF qualquer (ex: tabela de preços) por e-mail, em anexo,
+        para o cliente informado.'
+      parameters:
+      - description: ID do cliente
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Assunto, mensagem e PDF em base64
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httphandler.sendDocumentEmailRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphandler.messageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httphandler.errorResponse'
+      summary: Enviar documento por e-mail para um cliente
+      tags:
+      - Clients
   /expenses:
     get:
       produces:

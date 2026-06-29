@@ -86,6 +86,7 @@ func SetupRouter(h *Handler, authUC ports.AuthUseCase) *gin.Engine {
 			gated.DELETE("/clients/:id/orders", h.ClearClientOrders)
 			gated.GET("/clients/:id/quotes", h.GetClientQuotes)
 			gated.DELETE("/clients/:id/quotes", h.ClearClientQuotes)
+			gated.POST("/clients/:id/send-document-email", h.SendDocumentEmail)
 			gated.GET("/payments", h.GetAllPayments)
 			gated.GET("/clients/:id/payment-history", h.GetClientPayments)
 			gated.DELETE("/clients/:id/payment-history", h.ClearClientPayments)
