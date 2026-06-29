@@ -25,21 +25,25 @@ type Claims struct {
 }
 
 type AuthService struct {
-	userRepo    ports.UserRepository
-	emailSender ports.EmailSender
-	jwtSecret   []byte
-	frontendURL string
+	userRepo         ports.UserRepository
+	emailSender      ports.EmailSender
+	jwtSecret        []byte
+	frontendURL      string
+	registrationCode string
 }
 
-func NewAuthService(userRepo ports.UserRepository, emailSender ports.EmailSender, frontendURL string) (*AuthService, error) {
+func NewAuthService(userRepo ports.UserRepository, emailSender ports.EmailSender, frontendURL, registrationCode string) (*AuthService, error) {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
 		return nil, errors.New("JWT_SECRET não configurada")
 	}
-	return &AuthService{userRepo: userRepo, emailSender: emailSender, jwtSecret: []byte(secret), frontendURL: frontendURL}, nil
+	return &AuthService{userRepo: userRepo, emailSender: emailSender, jwtSecret: []byte(secret), frontendURL: frontendURL, registrationCode: registrationCode}, nil
 }
 
-func (s *AuthService) Register(ctx context.Context, name, email, password string, plan domain.Plan) (*domain.User, error) {
+func (s *AuthService) Register(ctx context.Context, name, email, password string, plan domain.Plan, accessCode string) (*domain.User, error) {
+	if s.registrationCode != "" && accessCode != s.registrationCode {
+		return nil, domain.ErrInvalidAccessCode
+	}
 	if !plan.Selectable() {
 		return nil, fmt.Errorf("plano inválido: %w", domain.ErrValidation)
 	}

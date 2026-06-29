@@ -573,6 +573,9 @@ definitions:
     type: object
   httphandler.registerRequest:
     properties:
+      access_code:
+        example: convite-2026
+        type: string
       email:
         example: joao@email.com
         type: string

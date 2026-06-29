@@ -14,10 +14,11 @@ type loginRequest struct {
 }
 
 type registerRequest struct {
-	Name     string `json:"name" binding:"required" example:"João Silva"`
-	Email    string `json:"email" binding:"required" example:"joao@email.com"`
-	Password string `json:"password" binding:"required" example:"123456"`
-	Plan     string `json:"plan" binding:"required" example:"trial"`
+	Name       string `json:"name" binding:"required" example:"João Silva"`
+	Email      string `json:"email" binding:"required" example:"joao@email.com"`
+	Password   string `json:"password" binding:"required" example:"123456"`
+	Plan       string `json:"plan" binding:"required" example:"trial"`
+	AccessCode string `json:"access_code" example:"convite-2026"`
 }
 
 type forgotPasswordRequest struct {
@@ -62,7 +63,7 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	if _, err := h.authUC.Register(c.Request.Context(), body.Name, body.Email, body.Password, domain.Plan(body.Plan)); err != nil {
+	if _, err := h.authUC.Register(c.Request.Context(), body.Name, body.Email, body.Password, domain.Plan(body.Plan), body.AccessCode); err != nil {
 		respondError(c, err)
 		return
 	}

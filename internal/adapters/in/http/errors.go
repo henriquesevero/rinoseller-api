@@ -25,6 +25,8 @@ func respondError(c *gin.Context, err error) {
 		status, code = http.StatusPaymentRequired, "subscription_required"
 	case errors.Is(err, domain.ErrPaymentFailed):
 		status, code = http.StatusBadRequest, "payment_failed"
+	case errors.Is(err, domain.ErrInvalidAccessCode):
+		status, code = http.StatusForbidden, "invalid_access_code"
 	case errors.Is(err, domain.ErrNotFound):
 		status = http.StatusNotFound
 	case errors.Is(err, domain.ErrConflict):

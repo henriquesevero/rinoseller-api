@@ -61,8 +61,12 @@ func main() {
 	}
 	emailSender := email.NewResendSender(resendAPIKey, resendFromEmail)
 	paymentGateway := payment.NewMockAsaasGateway()
+	registrationCode := os.Getenv("REGISTRATION_ACCESS_CODE")
+	if registrationCode == "" {
+		log.Println("⚠ REGISTRATION_ACCESS_CODE não configurada — cadastro público está aberto sem trava")
+	}
 
-	authService, err := services.NewAuthService(userRepo, emailSender, frontendURL)
+	authService, err := services.NewAuthService(userRepo, emailSender, frontendURL, registrationCode)
 	if err != nil {
 		log.Fatalf("Falha ao iniciar serviço de autenticação: %v", err)
 	}

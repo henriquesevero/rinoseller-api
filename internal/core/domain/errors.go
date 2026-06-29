@@ -17,4 +17,5 @@ var (
 	ErrEmailTaken           = fmt.Errorf("e-mail já cadastrado: %w", ErrConflict)
 	ErrSubscriptionRequired = errors.New("período de teste expirado, assine um plano para continuar")
 	ErrPaymentFailed        = fmt.Errorf("pagamento não aprovado: %w", ErrValidation)
+	ErrInvalidAccessCode    = fmt.Errorf("código de acesso inválido: %w", ErrForbidden)
 )

@@ -116,7 +116,7 @@ type PaymentGateway interface {
 }
 
 type AuthUseCase interface {
-	Register(ctx context.Context, name, email, password string, plan domain.Plan) (*domain.User, error)
+	Register(ctx context.Context, name, email, password string, plan domain.Plan, accessCode string) (*domain.User, error)
 	VerifyEmail(ctx context.Context, token string) error
 	ResendVerificationEmail(ctx context.Context, email string) error
 	Login(ctx context.Context, email, password string) (token string, user *domain.User, err error)

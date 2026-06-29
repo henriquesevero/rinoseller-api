@@ -3026,6 +3026,10 @@ const docTemplate = `{
                 "plan"
             ],
             "properties": {
+                "access_code": {
+                    "type": "string",
+                    "example": "convite-2026"
+                },
                 "email": {
                     "type": "string",
                     "example": "joao@email.com"
