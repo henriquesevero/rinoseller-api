@@ -29,6 +29,10 @@ type updatePriceRequest struct {
 	Price float64 `json:"price" example:"29.90"`
 }
 
+type updateCostPriceRequest struct {
+	CostPrice float64 `json:"cost_price" example:"15.50"`
+}
+
 type updateStockRequest struct {
 	Quantity int `json:"quantity" example:"50"`
 }
@@ -118,6 +122,31 @@ func (h *Handler) UpdatePrice(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, messageResponse{Message: "preço atualizado com sucesso"})
+}
+
+// @Summary     Atualizar preço de custo
+// @Tags        Produtos
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id   path string                  true "ID do produto"
+// @Param       body body updateCostPriceRequest true "Novo preço de custo"
+// @Success     200 {object} messageResponse
+// @Failure     400 {object} errorResponse
+// @Failure     404 {object} errorResponse
+// @Router      /products/{id}/cost-price [patch]
+func (h *Handler) UpdateCostPrice(c *gin.Context) {
+	id := c.Param("id")
+	var body updateCostPriceRequest
+	if err := c.ShouldBindJSON(&body); err != nil {
+		badRequest(c, "preço de custo inválido")
+		return
+	}
+	if err := h.productUC.UpdateCostPrice(c.Request.Context(), id, domain.NewMoneyFromFloat(body.CostPrice)); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, messageResponse{Message: "preço de custo atualizado com sucesso"})
 }
 
 // @Summary     Atualizar estoque

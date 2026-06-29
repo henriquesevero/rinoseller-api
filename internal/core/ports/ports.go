@@ -30,6 +30,7 @@ type ProductRepository interface {
 	FindByID(ctx context.Context, id string) (*domain.Product, error)
 	UpdateStock(ctx context.Context, id string, newStock int) error
 	UpdatePrice(ctx context.Context, id string, price domain.Money) error
+	UpdateCostPrice(ctx context.Context, id string, costPrice domain.Money) error
 	Delete(ctx context.Context, id string) error
 }
 
@@ -148,6 +149,7 @@ type ProductUseCase interface {
 	ListProducts(ctx context.Context, userID string) ([]domain.Product, error)
 	CreateProduct(ctx context.Context, p *domain.Product) error
 	UpdatePrice(ctx context.Context, id string, price domain.Money) error
+	UpdateCostPrice(ctx context.Context, id string, costPrice domain.Money) error
 	UpdateStock(ctx context.Context, id string, newStock int) error
 	DeleteProduct(ctx context.Context, id string) error
 }

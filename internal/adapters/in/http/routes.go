@@ -70,6 +70,7 @@ func SetupRouter(h *Handler, authUC ports.AuthUseCase) *gin.Engine {
 			gated.GET("/products", h.ListProducts)
 			gated.POST("/products", h.CreateProduct)
 			gated.PATCH("/products/:id/price", h.UpdatePrice)
+			gated.PATCH("/products/:id/cost-price", h.UpdateCostPrice)
 			gated.PATCH("/products/:id/stock", h.UpdateStock)
 			gated.DELETE("/products/:id", h.DeleteProduct)
 

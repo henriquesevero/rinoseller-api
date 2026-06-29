@@ -47,6 +47,13 @@ func (s *ProductService) UpdatePrice(ctx context.Context, id string, price domai
 	return s.repo.UpdatePrice(ctx, id, price)
 }
 
+func (s *ProductService) UpdateCostPrice(ctx context.Context, id string, costPrice domain.Money) error {
+	if !costPrice.IsPositive() {
+		return fmt.Errorf("preço de custo deve ser maior que zero: %w", domain.ErrValidation)
+	}
+	return s.repo.UpdateCostPrice(ctx, id, costPrice)
+}
+
 func (s *ProductService) UpdateStock(ctx context.Context, id string, newStock int) error {
 	if newStock < 0 {
 		return fmt.Errorf("quantidade não pode ser negativa: %w", domain.ErrValidation)

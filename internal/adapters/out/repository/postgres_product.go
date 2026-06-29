@@ -187,6 +187,17 @@ func (r *PostgresProductRepository) UpdatePrice(ctx context.Context, id string, 
 	return nil
 }
 
+func (r *PostgresProductRepository) UpdateCostPrice(ctx context.Context, id string, costPrice domain.Money) error {
+	tag, err := r.db.Exec(ctx, `UPDATE products SET cost_price=$1 WHERE id=$2`, costPrice.Float64(), id)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("produto não encontrado: %w", domain.ErrNotFound)
+	}
+	return nil
+}
+
 func (r *PostgresProductRepository) Delete(ctx context.Context, id string) error {
 	tag, err := r.db.Exec(ctx, `DELETE FROM products WHERE id = $1`, id)
 	if err != nil {
