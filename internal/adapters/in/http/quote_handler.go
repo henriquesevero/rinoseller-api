@@ -14,11 +14,13 @@ type quoteItemRequest struct {
 }
 
 type createQuoteRequest struct {
-	ClientID     string             `json:"client_id" binding:"required"`
-	Items        []quoteItemRequest `json:"items" binding:"required,min=1"`
-	Notes        string             `json:"notes"`
-	PaymentType  string             `json:"payment_type"`
-	Installments int                `json:"installments"`
+	ClientID      string             `json:"client_id" binding:"required"`
+	Items         []quoteItemRequest `json:"items" binding:"required,min=1"`
+	Notes         string             `json:"notes"`
+	PaymentType   string             `json:"payment_type"`
+	Installments  int                `json:"installments"`
+	DiscountType  string             `json:"discount_type"`
+	DiscountValue float64            `json:"discount_value"`
 }
 
 func (req createQuoteRequest) toDomain(userID string) domain.Quote {
@@ -27,12 +29,14 @@ func (req createQuoteRequest) toDomain(userID string) domain.Quote {
 		items[i] = domain.QuoteItem{ProductID: it.ProductID, Quantity: it.Quantity}
 	}
 	return domain.Quote{
-		UserID:       userID,
-		ClientID:     req.ClientID,
-		Items:        items,
-		Notes:        req.Notes,
-		PaymentType:  domain.PaymentType(req.PaymentType),
-		Installments: req.Installments,
+		UserID:        userID,
+		ClientID:      req.ClientID,
+		Items:         items,
+		Notes:         req.Notes,
+		PaymentType:   domain.PaymentType(req.PaymentType),
+		Installments:  req.Installments,
+		DiscountType:  req.DiscountType,
+		DiscountValue: domain.NewMoneyFromFloat(req.DiscountValue),
 	}
 }
 
@@ -77,6 +81,35 @@ func (h *Handler) CreateQuote(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, q)
+}
+
+// @Summary     Atualizar itens de orçamento
+// @Tags        Orçamentos
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id   path string              true "ID do orçamento"
+// @Param       body body createQuoteRequest true "Novos itens"
+// @Success     200 {object} domain.Quote
+// @Failure     400 {object} errorResponse
+// @Failure     404 {object} errorResponse
+// @Router      /quotes/{id}/items [patch]
+func (h *Handler) UpdateQuoteItems(c *gin.Context) {
+	var req createQuoteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		badRequest(c, "itens inválidos")
+		return
+	}
+	items := make([]domain.QuoteItem, len(req.Items))
+	for i, it := range req.Items {
+		items[i] = domain.QuoteItem{ProductID: it.ProductID, Quantity: it.Quantity}
+	}
+	q, err := h.quoteUC.UpdateQuoteItems(c.Request.Context(), c.Param("id"), items, req.DiscountType, domain.NewMoneyFromFloat(req.DiscountValue))
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, q)
 }
 
 // @Summary     Buscar orçamento

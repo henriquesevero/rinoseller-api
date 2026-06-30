@@ -83,6 +83,7 @@ type QuoteRepository interface {
 	FindAll(ctx context.Context, userID string) ([]domain.Quote, error)
 	FindByID(ctx context.Context, id string) (*domain.Quote, error)
 	Update(ctx context.Context, q *domain.Quote) error
+	UpdateItems(ctx context.Context, q *domain.Quote) error
 	FindByClientID(ctx context.Context, clientID string) ([]domain.Quote, error)
 	Delete(ctx context.Context, id string) error
 	DeleteByClientID(ctx context.Context, clientID string) error
@@ -198,6 +199,7 @@ type ExpenseUseCase interface {
 type QuoteUseCase interface {
 	ListQuotes(ctx context.Context, userID string) ([]domain.Quote, error)
 	CreateQuote(ctx context.Context, q *domain.Quote) error
+	UpdateQuoteItems(ctx context.Context, id string, items []domain.QuoteItem, discountType string, discountValue domain.Money) (*domain.Quote, error)
 	GetQuote(ctx context.Context, id string) (*domain.Quote, error)
 	ApproveQuote(ctx context.Context, id string) (*domain.Quote, error)
 	DeliverQuote(ctx context.Context, id string) (*domain.Quote, error)

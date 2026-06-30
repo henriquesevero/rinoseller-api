@@ -49,10 +49,10 @@ func (r *PostgresQuoteRepository) Save(ctx context.Context, q *domain.Quote) err
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	_, err = tx.Exec(ctx, `
-		INSERT INTO quotes (id, user_id, client_id, client_name, total, status, notes, payment_type, installments, created_at, approved_at, invoiced_at, delivered_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		INSERT INTO quotes (id, user_id, client_id, client_name, total, status, notes, payment_type, installments, discount_type, discount_value, created_at, approved_at, invoiced_at, delivered_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 	`, q.ID, nullStr(q.UserID), q.ClientID, q.ClientName, q.Total.Float64(), string(q.Status), q.Notes,
-		string(q.PaymentType), q.Installments, q.CreatedAt, q.ApprovedAt, q.InvoicedAt, q.DeliveredAt)
+		string(q.PaymentType), q.Installments, q.DiscountType, q.DiscountValue.Float64(), q.CreatedAt, q.ApprovedAt, q.InvoicedAt, q.DeliveredAt)
 	if err != nil {
 		return err
 	}
@@ -73,19 +73,19 @@ func (r *PostgresQuoteRepository) Save(ctx context.Context, q *domain.Quote) err
 func (r *PostgresQuoteRepository) FindAll(ctx context.Context, userID string) ([]domain.Quote, error) {
 	if userID == "" {
 		return r.query(ctx, `
-			SELECT id, COALESCE(user_id,''), client_id, client_name, total, status, notes, payment_type, installments, created_at, approved_at, invoiced_at, delivered_at
+			SELECT id, COALESCE(user_id,''), client_id, client_name, total, status, notes, payment_type, installments, discount_type, discount_value, created_at, approved_at, invoiced_at, delivered_at
 			FROM quotes ORDER BY created_at DESC
 		`)
 	}
 	return r.query(ctx, `
-		SELECT id, COALESCE(user_id,''), client_id, client_name, total, status, notes, payment_type, installments, created_at, approved_at, invoiced_at, delivered_at
+		SELECT id, COALESCE(user_id,''), client_id, client_name, total, status, notes, payment_type, installments, discount_type, discount_value, created_at, approved_at, invoiced_at, delivered_at
 		FROM quotes WHERE user_id = $1 ORDER BY created_at DESC
 	`, userID)
 }
 
 func (r *PostgresQuoteRepository) FindByClientID(ctx context.Context, clientID string) ([]domain.Quote, error) {
 	return r.query(ctx, `
-		SELECT id, COALESCE(user_id,''), client_id, client_name, total, status, notes, payment_type, installments, created_at, approved_at, invoiced_at, delivered_at
+		SELECT id, COALESCE(user_id,''), client_id, client_name, total, status, notes, payment_type, installments, discount_type, discount_value, created_at, approved_at, invoiced_at, delivered_at
 		FROM quotes WHERE client_id = $1 ORDER BY created_at DESC
 	`, clientID)
 }
@@ -143,7 +143,7 @@ func (r *PostgresQuoteRepository) query(ctx context.Context, sql string, args ..
 
 func (r *PostgresQuoteRepository) FindByID(ctx context.Context, id string) (*domain.Quote, error) {
 	row := r.db.QueryRow(ctx, `
-		SELECT id, COALESCE(user_id,''), client_id, client_name, total, status, notes, payment_type, installments, created_at, approved_at, invoiced_at, delivered_at
+		SELECT id, COALESCE(user_id,''), client_id, client_name, total, status, notes, payment_type, installments, discount_type, discount_value, created_at, approved_at, invoiced_at, delivered_at
 		FROM quotes WHERE id = $1
 	`, id)
 	q, err := scanQuote(row)
@@ -185,6 +185,34 @@ func (r *PostgresQuoteRepository) Update(ctx context.Context, q *domain.Quote) e
 	return nil
 }
 
+func (r *PostgresQuoteRepository) UpdateItems(ctx context.Context, q *domain.Quote) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	if _, err = tx.Exec(ctx, `UPDATE quotes SET total=$1, discount_type=$2, discount_value=$3 WHERE id=$4`,
+		q.Total.Float64(), q.DiscountType, q.DiscountValue.Float64(), q.ID); err != nil {
+		return err
+	}
+
+	if _, err = tx.Exec(ctx, `DELETE FROM quote_items WHERE quote_id = $1`, q.ID); err != nil {
+		return err
+	}
+
+	for _, item := range q.Items {
+		if _, err = tx.Exec(ctx, `
+			INSERT INTO quote_items (id, quote_id, product_id, product_name, quantity, unit_price, subtotal, kit_items)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		`, uuid.New().String(), q.ID, item.ProductID, item.ProductName, item.Quantity, item.UnitPrice.Float64(), item.Subtotal.Float64(), marshalKitItems(item.KitItems)); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit(ctx)
+}
+
 func (r *PostgresQuoteRepository) DeleteByClientID(ctx context.Context, clientID string) error {
 	_, err := r.db.Exec(ctx, `DELETE FROM quotes WHERE client_id = $1`, clientID)
 	return err
@@ -203,16 +231,17 @@ func (r *PostgresQuoteRepository) Delete(ctx context.Context, id string) error {
 
 func scanQuote(row rowScanner) (domain.Quote, error) {
 	var q domain.Quote
-	var total float64
+	var total, discountValue float64
 	var status, paymentType string
 	err := row.Scan(&q.ID, &q.UserID, &q.ClientID, &q.ClientName, &total, &status, &q.Notes,
-		&paymentType, &q.Installments, &q.CreatedAt, &q.ApprovedAt, &q.InvoicedAt, &q.DeliveredAt)
+		&paymentType, &q.Installments, &q.DiscountType, &discountValue, &q.CreatedAt, &q.ApprovedAt, &q.InvoicedAt, &q.DeliveredAt)
 	if err != nil {
 		return domain.Quote{}, err
 	}
 	q.Total = domain.NewMoneyFromFloat(total)
 	q.Status = domain.QuoteStatus(status)
 	q.PaymentType = domain.PaymentType(paymentType)
+	q.DiscountValue = domain.NewMoneyFromFloat(discountValue)
 	return q, nil
 }
 

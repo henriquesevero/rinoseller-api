@@ -97,6 +97,7 @@ func SetupRouter(h *Handler, authUC ports.AuthUseCase) *gin.Engine {
 			gated.GET("/quotes", h.ListQuotes)
 			gated.POST("/quotes", h.CreateQuote)
 			gated.GET("/quotes/:id", h.GetQuote)
+			gated.PATCH("/quotes/:id/items", h.UpdateQuoteItems)
 			gated.POST("/quotes/:id/approve", h.ApproveQuote)
 			gated.POST("/quotes/:id/deliver", h.DeliverQuote)
 			gated.POST("/quotes/:id/invoice", h.InvoiceQuote)

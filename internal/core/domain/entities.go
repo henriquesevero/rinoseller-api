@@ -147,20 +147,22 @@ type QuoteItem struct {
 }
 
 type Quote struct {
-	ID           string      `json:"id"`
-	UserID       string      `json:"user_id,omitempty"`
-	ClientID     string      `json:"client_id"`
-	ClientName   string      `json:"client_name"`
-	Items        []QuoteItem `json:"items"`
-	Total        Money       `json:"total"`
-	Status       QuoteStatus `json:"status"`
-	Notes        string      `json:"notes"`
-	PaymentType  PaymentType `json:"payment_type"`
-	Installments int         `json:"installments"`
-	CreatedAt    time.Time   `json:"created_at"`
-	ApprovedAt   *time.Time  `json:"approved_at,omitempty"`
-	InvoicedAt   *time.Time  `json:"invoiced_at,omitempty"`
-	DeliveredAt  *time.Time  `json:"delivered_at,omitempty"`
+	ID            string      `json:"id"`
+	UserID        string      `json:"user_id,omitempty"`
+	ClientID      string      `json:"client_id"`
+	ClientName    string      `json:"client_name"`
+	Items         []QuoteItem `json:"items"`
+	Total         Money       `json:"total"`
+	Status        QuoteStatus `json:"status"`
+	Notes         string      `json:"notes"`
+	PaymentType   PaymentType `json:"payment_type"`
+	Installments  int         `json:"installments"`
+	DiscountType  string      `json:"discount_type"`
+	DiscountValue Money       `json:"discount_value"`
+	CreatedAt     time.Time   `json:"created_at"`
+	ApprovedAt    *time.Time  `json:"approved_at,omitempty"`
+	InvoicedAt    *time.Time  `json:"invoiced_at,omitempty"`
+	DeliveredAt   *time.Time  `json:"delivered_at,omitempty"`
 }
 
 func (q *Quote) Approve() error {

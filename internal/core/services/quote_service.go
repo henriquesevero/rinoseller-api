@@ -63,12 +63,75 @@ func (s *QuoteService) CreateQuote(ctx context.Context, q *domain.Quote) error {
 		total = total.Add(q.Items[i].Subtotal)
 	}
 
+	// Aplicar desconto ao total
+	switch q.DiscountType {
+	case "%":
+		if pct := q.DiscountValue.Float64(); pct > 0 && pct <= 100 {
+			disc := domain.NewMoneyFromFloat(total.Float64() * pct / 100)
+			total = total.Sub(disc)
+		}
+	case "R$":
+		if d := q.DiscountValue; d.IsPositive() {
+			total = total.Sub(d).AtLeastZero()
+		}
+	}
+
 	q.ID = uuid.New().String()
 	q.Total = total
 	q.Status = domain.QuoteStatusAwaitingApproval
 	q.CreatedAt = time.Now()
 
 	return s.quoteRepo.Save(ctx, q)
+}
+
+func (s *QuoteService) UpdateQuoteItems(ctx context.Context, id string, items []domain.QuoteItem, discountType string, discountValue domain.Money) (*domain.Quote, error) {
+	q, err := s.quoteRepo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if q.Status != domain.QuoteStatusAwaitingApproval {
+		return nil, fmt.Errorf("só é possível editar orçamentos aguardando aprovação: %w", domain.ErrValidation)
+	}
+	if len(items) == 0 {
+		return nil, fmt.Errorf("o orçamento precisa ter ao menos um item: %w", domain.ErrValidation)
+	}
+
+	var total domain.Money
+	for i, item := range items {
+		product, err := s.productRepo.FindByID(ctx, item.ProductID)
+		if err != nil {
+			return nil, fmt.Errorf("produto %s não encontrado: %w", item.ProductID, domain.ErrValidation)
+		}
+		items[i].ProductName = product.Name
+		items[i].UnitPrice = product.Price
+		items[i].Subtotal = product.Price.MulQty(item.Quantity)
+		if product.IsKit {
+			items[i].KitItems = product.KitItems
+		}
+		total = total.Add(items[i].Subtotal)
+	}
+
+	switch discountType {
+	case "%":
+		if pct := discountValue.Float64(); pct > 0 && pct <= 100 {
+			disc := domain.NewMoneyFromFloat(total.Float64() * pct / 100)
+			total = total.Sub(disc)
+		}
+	case "R$":
+		if discountValue.IsPositive() {
+			total = total.Sub(discountValue).AtLeastZero()
+		}
+	}
+
+	q.Items = items
+	q.Total = total
+	q.DiscountType = discountType
+	q.DiscountValue = discountValue
+
+	if err := s.quoteRepo.UpdateItems(ctx, q); err != nil {
+		return nil, err
+	}
+	return q, nil
 }
 
 func (s *QuoteService) GetQuote(ctx context.Context, id string) (*domain.Quote, error) {
