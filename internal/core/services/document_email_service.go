@@ -27,12 +27,16 @@ func (s *DocumentEmailService) SendDocumentEmail(ctx context.Context, clientID, 
 		return fmt.Errorf("cliente não tem e-mail cadastrado: %w", domain.ErrValidation)
 	}
 
+	html := buildDocumentEmailContent(client.Name, message)
+
+	if pdfBase64 == "" {
+		return s.emailSender.Send(ctx, client.Email, client.Name, subject, html)
+	}
+
 	pdfBytes, err := base64.StdEncoding.DecodeString(pdfBase64)
 	if err != nil {
 		return fmt.Errorf("PDF inválido: %w", domain.ErrValidation)
 	}
-
-	html := buildDocumentEmailContent(client.Name, message)
 
 	return s.emailSender.Send(ctx, client.Email, client.Name, subject, html, ports.EmailAttachment{
 		Filename: filename,

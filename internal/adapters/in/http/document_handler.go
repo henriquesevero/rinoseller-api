@@ -9,8 +9,8 @@ import (
 type sendDocumentEmailRequest struct {
 	Subject   string `json:"subject" binding:"required" example:"Tabela de Preços — Elements"`
 	Message   string `json:"message" binding:"required" example:"Segue em anexo nossa tabela de preços atualizada."`
-	Filename  string `json:"filename" binding:"required" example:"tabela-elements.pdf"`
-	PDFBase64 string `json:"pdf_base64" binding:"required"`
+	Filename  string `json:"filename"`
+	PDFBase64 string `json:"pdf_base64"` // opcional — quando vazio envia sem anexo
 }
 
 // @Summary     Enviar documento por e-mail para um cliente
