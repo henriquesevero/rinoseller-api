@@ -89,9 +89,6 @@ func (s *QuoteService) UpdateQuoteItems(ctx context.Context, id string, items []
 	if err != nil {
 		return nil, err
 	}
-	if q.Status != domain.QuoteStatusAwaitingApproval {
-		return nil, fmt.Errorf("só é possível editar orçamentos aguardando aprovação: %w", domain.ErrValidation)
-	}
 	if len(items) == 0 {
 		return nil, fmt.Errorf("o orçamento precisa ter ao menos um item: %w", domain.ErrValidation)
 	}
